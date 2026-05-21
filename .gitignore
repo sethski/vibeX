@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.vibex/
+.env
+.DS_Store
+npm-debug.log*

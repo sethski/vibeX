@@ -1,0 +1,37 @@
+{
+  "name": "vibex",
+  "version": "0.1.0",
+  "description": "Local-first prompt optimizer and context bridge for AI coding tools.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "vibex": "./dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev:server": "tsx src/bridge/server.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "ai",
+    "prompt",
+    "optimizer",
+    "cli",
+    "typescript",
+    "local-first"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}
