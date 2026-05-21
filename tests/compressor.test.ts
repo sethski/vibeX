@@ -34,7 +34,7 @@ test("includes terminal errors only for debug-like prompts", () => {
   assert.doesNotMatch(compressPrompt("add redirect helper", context).optimized, /TypeError/);
 });
 
-test("keeps prompt within token budget", () => {
+test("keeps prompt within default token budget", () => {
   const result = compressPrompt(
     "please improve the very confusing authentication redirect behavior",
     {
@@ -44,9 +44,8 @@ test("keeps prompt within token budget", () => {
       gitSummary: "100 files changed with many low signal details",
       recentErrors: ["Long error ".repeat(30)],
       importNeighbors: ["src/auth/client.ts", "src/auth/session.ts"]
-    },
-    { maxTokens: 30 }
+    }
   );
 
-  assert.equal(result.tokenEstimate <= 30, true);
+  assert.equal(result.tokenEstimate <= 120, true);
 });

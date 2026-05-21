@@ -38,7 +38,7 @@ test("optimize endpoint returns structured result", async () => {
   assert.equal(body.analysis.isVague, true);
 });
 
-test("optimize endpoint applies target profile", async () => {
+test("optimize endpoint accepts target without adding wrapper tokens", async () => {
   const server = createServer();
   const response = await server.inject({
     method: "POST",
@@ -52,5 +52,6 @@ test("optimize endpoint applies target profile", async () => {
 
   const body = JSON.parse(response.body);
   assert.equal(response.statusCode, 200);
-  assert.match(body.optimized, /^Think briefly, then edit\./);
+  assert.match(body.optimized, /^Fix auth/);
+  assert.doesNotMatch(body.optimized, /Think briefly|Use open files|Apply as focused/);
 });

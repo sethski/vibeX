@@ -1,8 +1,8 @@
 import { DEBUG_TRIGGER_WORDS, DEFAULT_MAX_TOKENS, FILLER_WORDS } from "../config/defaults.js";
 import type { CompressionOptions, CompressionResult, ProjectContext } from "../types.js";
 
-export function compressPrompt(raw: string, context: ProjectContext, options: CompressionOptions = {}): CompressionResult {
-  const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS;
+export function compressPrompt(raw: string, context: ProjectContext, _options: CompressionOptions = {}): CompressionResult {
+  const maxTokens = DEFAULT_MAX_TOKENS;
   const contextUsed: string[] = [];
   const parts: string[] = [toIntent(raw)];
 

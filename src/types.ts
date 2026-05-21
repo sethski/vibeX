@@ -17,7 +17,6 @@ export interface ProjectContext {
 }
 
 export interface CompressionOptions {
-  maxTokens?: number;
   target?: TargetProfile;
 }
 

@@ -8,17 +8,16 @@ test("codex profile keeps concise default prompt", () => {
   assert.equal(prompt, "Fix auth | Stack: node");
 });
 
-test("claude profile asks for brief plan then patch", () => {
+test("claude profile does not add extra wrapper tokens", () => {
   const prompt = applyTargetProfile("Fix auth | Stack: node", "claude");
 
-  assert.match(prompt, /^Think briefly, then edit\./);
-  assert.match(prompt, /Fix auth/);
+  assert.equal(prompt, "Fix auth | Stack: node");
 });
 
-test("cursor profile includes file-focused instruction", () => {
+test("cursor profile does not add extra wrapper tokens", () => {
   const prompt = applyTargetProfile("Fix auth | Stack: node", "cursor");
 
-  assert.match(prompt, /Use open files and current selection first\./);
+  assert.equal(prompt, "Fix auth | Stack: node");
 });
 
 test("rejects unsupported target profile", () => {

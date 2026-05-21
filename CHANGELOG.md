@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Remove public token budget control from TypeScript/API options.
+- Make target profiles low-token aliases with no added wrapper text.
+- Keep fixed internal token-efficient trimming.
+
 ## 0.2.0
 
 - Add target profiles for Codex, Claude, Cursor, and Copilot.

@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 test("cli supports target profiles", async () => {
   const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "--target", "cursor", "fix auth"]);
 
-  assert.match(stdout, /Use open files and current selection first\./);
+  assert.equal(stdout.trim(), "Fix auth | Preserve existing style/tests. Output changed lines only. No markdown.");
 });
 
 test("cli doctor prints JSON report", async () => {

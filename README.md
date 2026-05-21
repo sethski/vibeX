@@ -11,7 +11,7 @@ v0.2 MVP:
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
 - CLI prompt optimization
-- Target profiles for Codex, Claude, Cursor, and Copilot
+- Low-token target aliases for Codex, Claude, Cursor, and Copilot
 - `vibex doctor` environment checks
 - Optional clipboard output with `--copy`
 - Localhost `/optimize` API
@@ -51,7 +51,7 @@ JSON output:
 node dist/src/cli.js --json "fix auth"
 ```
 
-Target profiles:
+Target aliases:
 
 ```bash
 node dist/src/cli.js --target codex "fix auth"
@@ -59,6 +59,8 @@ node dist/src/cli.js --target claude "fix auth"
 node dist/src/cli.js --target cursor "fix auth"
 node dist/src/cli.js --target copilot "fix auth"
 ```
+
+Target aliases validate the destination tool name but do not add wrapper instructions. The target AI uses its own model; vibeX only sends the compact optimized prompt.
 
 Clipboard mode:
 
