@@ -6,11 +6,14 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.1 MVP:
+v0.2 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
 - CLI prompt optimization
+- Target profiles for Codex, Claude, Cursor, and Copilot
+- `vibex doctor` environment checks
+- Optional clipboard output with `--copy`
 - Localhost `/optimize` API
 - Local-only processing with no telemetry and no external LLM calls
 
@@ -48,6 +51,28 @@ JSON output:
 node dist/src/cli.js --json "fix auth"
 ```
 
+Target profiles:
+
+```bash
+node dist/src/cli.js --target codex "fix auth"
+node dist/src/cli.js --target claude "fix auth"
+node dist/src/cli.js --target cursor "fix auth"
+node dist/src/cli.js --target copilot "fix auth"
+```
+
+Clipboard mode:
+
+```bash
+node dist/src/cli.js --copy "fix auth"
+```
+
+Doctor:
+
+```bash
+node dist/src/cli.js doctor
+node dist/src/cli.js doctor --json
+```
+
 ## Server
 
 ```bash
@@ -80,6 +105,7 @@ It does not store raw prompts, chat text, clipboard text, terminal history, secr
 npm test
 npm run typecheck
 npm run build
+npm run pack:dry
 ```
 
 ## Roadmap

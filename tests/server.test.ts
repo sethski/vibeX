@@ -37,3 +37,20 @@ test("optimize endpoint returns structured result", async () => {
   assert.match(body.optimized, /Fix auth/);
   assert.equal(body.analysis.isVague, true);
 });
+
+test("optimize endpoint applies target profile", async () => {
+  const server = createServer();
+  const response = await server.inject({
+    method: "POST",
+    url: "/optimize",
+    body: JSON.stringify({
+      prompt: "fix auth",
+      context: { root: "/repo", stack: ["node"], activeFile: "src/auth.ts" },
+      options: { target: "claude" }
+    })
+  });
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.match(body.optimized, /^Think briefly, then edit\./);
+});

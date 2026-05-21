@@ -1,6 +1,7 @@
 import type { OptimizeOptions, ProjectContext } from "../types.js";
 import { compressPrompt } from "./compressor.js";
 import { grabContext } from "./context-grabber.js";
+import { applyTargetProfile } from "./profiles.js";
 
 export async function optimizePrompt(
   raw: string,
@@ -21,5 +22,5 @@ export async function optimizePrompt(
     importNeighbors: context.importNeighbors ?? []
   };
 
-  return compressPrompt(raw, resolved, options).optimized;
+  return applyTargetProfile(compressPrompt(raw, resolved, options).optimized, options.target);
 }

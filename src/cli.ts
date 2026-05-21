@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { formatDoctorReport, runDoctor } from "./core/doctor.js";
 import { optimizePrompt } from "./core/formatter.js";
 import { clearProjectMemory, loadProjectMemory, saveProjectMemory, scanProject } from "./core/memory.js";
-import type { ProjectContext } from "./types.js";
+import { isTargetProfile } from "./core/profiles.js";
+import type { ProjectContext, TargetProfile } from "./types.js";
 
 const args = process.argv.slice(2);
 
@@ -26,13 +29,27 @@ async function main(): Promise<void> {
   }
 
   const json = consumeFlag("--json");
+  if (args[0] === "doctor") {
+    args.shift();
+    const report = await runDoctor(process.cwd());
+    console.log(json ? JSON.stringify(report, null, 2) : formatDoctorReport(report));
+    process.exitCode = report.ok ? 0 : 1;
+    return;
+  }
+
+  const copy = consumeFlag("--copy");
+  const target = consumeTarget();
   const contextFile = consumeOption("--context-file");
   const prompt = stripOuterQuotes(args.join(" ").trim());
   const context = contextFile ? JSON.parse(await readFile(contextFile, "utf8")) as Partial<ProjectContext> : {};
-  const optimized = await optimizePrompt(prompt, context);
+  const optimized = await optimizePrompt(prompt, context, { target });
+
+  if (copy) {
+    await copyToClipboard(optimized);
+  }
 
   if (json) {
-    console.log(JSON.stringify({ optimized }, null, 2));
+    console.log(JSON.stringify({ optimized, copied: copy, target }, null, 2));
     return;
   }
 
@@ -58,6 +75,14 @@ function consumeOption(flag: string): string | undefined {
   return value;
 }
 
+function consumeTarget(): TargetProfile {
+  const value = consumeOption("--target") ?? "codex";
+  if (!isTargetProfile(value)) {
+    throw new Error(`Unsupported target: ${value}`);
+  }
+  return value;
+}
+
 function stripOuterQuotes(value: string): string {
   if (
     (value.startsWith("\"") && value.endsWith("\"")) ||
@@ -66,6 +91,25 @@ function stripOuterQuotes(value: string): string {
     return value.slice(1, -1);
   }
   return value;
+}
+
+function copyToClipboard(value: string): Promise<void> {
+  const command = process.platform === "win32" ? "clip" : process.platform === "darwin" ? "pbcopy" : "xclip";
+  const args = process.platform === "linux" ? ["-selection", "clipboard"] : [];
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args);
+    child.stdin.write(value);
+    child.stdin.end();
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(`Clipboard command failed: ${command}`));
+    });
+  });
 }
 
 main().catch((error: unknown) => {

@@ -2,6 +2,7 @@ import { createServer as createHttpServer, type IncomingMessage, type ServerResp
 import { analyzePrompt } from "../core/analyzer.js";
 import { compressPrompt } from "../core/compressor.js";
 import { grabContext } from "../core/context-grabber.js";
+import { applyTargetProfile } from "../core/profiles.js";
 import type { CompressionOptions, ProjectContext } from "../types.js";
 
 interface InjectRequest {
@@ -55,9 +56,10 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
       };
       const analysis = analyzePrompt(payload.prompt);
       const compressed = compressPrompt(payload.prompt, context, payload.options);
+      const optimized = applyTargetProfile(compressed.optimized, payload.options?.target);
 
       return json(200, {
-        optimized: compressed.optimized,
+        optimized,
         analysis,
         tokenEstimate: compressed.tokenEstimate,
         contextUsed: compressed.contextUsed

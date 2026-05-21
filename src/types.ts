@@ -18,6 +18,7 @@ export interface ProjectContext {
 
 export interface CompressionOptions {
   maxTokens?: number;
+  target?: TargetProfile;
 }
 
 export interface CompressionResult {
@@ -28,6 +29,20 @@ export interface CompressionResult {
 
 export interface OptimizeOptions extends CompressionOptions {
   root?: string;
+}
+
+export type TargetProfile = "codex" | "claude" | "cursor" | "copilot";
+
+export interface DoctorCheck {
+  name: string;
+  ok: boolean;
+  message: string;
+}
+
+export interface DoctorReport {
+  ok: boolean;
+  root: string;
+  checks: DoctorCheck[];
 }
 
 export interface ProjectMemory {
