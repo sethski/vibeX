@@ -7,6 +7,7 @@ const CACHE_FILE = "cache.json";
 const KNOWN_STACK: Record<string, string[]> = {
   "@angular/core": ["angular"],
   "@sveltejs/kit": ["sveltekit"],
+  "nuxt": ["nuxt", "vue"],
   "next": ["next", "react"],
   "react": ["react"],
   "typescript": ["typescript"],
@@ -333,6 +334,9 @@ function detectFramework(deps: Record<string, unknown>, files: string[]): string
   const has = (name: string): boolean => Object.prototype.hasOwnProperty.call(deps, name);
   if (has("next")) {
     return "nextjs";
+  }
+  if (has("nuxt")) {
+    return "nuxt";
   }
   if (has("@sveltejs/kit")) {
     return "sveltekit";

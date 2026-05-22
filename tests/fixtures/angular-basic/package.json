@@ -1,0 +1,11 @@
+{
+  "name": "angular-basic",
+  "private": true,
+  "dependencies": {
+    "@angular/core": "18.0.0",
+    "typescript": "5.0.0"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

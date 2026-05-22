@@ -25,6 +25,34 @@ test("fixture: vite react project scan", async () => {
   assert.equal(memory.sourceRoots.includes("src"), true);
 });
 
+test("fixture: sveltekit project scan", async () => {
+  const root = join(FIXTURES, "sveltekit-basic");
+  const memory = await scanProject(root);
+
+  assert.equal(memory.framework, "sveltekit");
+  assert.equal(memory.packageManager, "npm");
+  assert.equal(memory.stack.includes("sveltekit"), true);
+});
+
+test("fixture: angular project scan", async () => {
+  const root = join(FIXTURES, "angular-basic");
+  const memory = await scanProject(root);
+
+  assert.equal(memory.framework, "angular");
+  assert.equal(memory.packageManager, "npm");
+  assert.equal(memory.stack.includes("angular"), true);
+});
+
+test("fixture: nuxt project scan", async () => {
+  const root = join(FIXTURES, "nuxt-basic");
+  const memory = await scanProject(root);
+
+  assert.equal(memory.framework, "nuxt");
+  assert.equal(memory.packageManager, "npm");
+  assert.equal(memory.stack.includes("nuxt"), true);
+  assert.equal(memory.stack.includes("vue"), true);
+});
+
 test("fixture: pnpm monorepo scan", async () => {
   const root = join(FIXTURES, "pnpm-monorepo-basic");
   const memory = await scanProject(root);

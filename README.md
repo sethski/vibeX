@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v1.0 MVP:
+v1.1 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -16,6 +16,7 @@ v1.0 MVP:
 - Optional clipboard output with `--copy`
 - Preview mode with include/exclude context controls
 - Context engine: package manager, framework, source/test roots, tsconfig aliases, import neighbors
+- Framework fixtures for Next.js, Vite React, pnpm monorepo, Angular, SvelteKit, and Nuxt
 - `vibex compare --json` for raw vs optimized token estimates
 - Confidence scores per context item in preview output
 - `vibex explain --json` for decision traces
@@ -202,9 +203,9 @@ npm run bench:context
 
 ## Roadmap
 
-- Target-specific profiles for Codex, Claude, Cursor, and Copilot
-- Context preview before optimization
-- Project fixtures for framework-specific context detection
+- VS Code/Cursor extension wrapper
+- Native hotkey listeners
+- Browser extension bridge
 
 ## License
 

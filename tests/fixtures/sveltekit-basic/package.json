@@ -1,0 +1,11 @@
+{
+  "name": "sveltekit-basic",
+  "private": true,
+  "dependencies": {
+    "@sveltejs/kit": "2.0.0",
+    "typescript": "5.0.0"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

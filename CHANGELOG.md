@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- Expand framework fixture coverage with Angular, SvelteKit, and Nuxt projects.
+- Add Nuxt detection to project-memory framework + stack inference.
+- Strengthen regression coverage for framework-specific context scanning.
+
 ## 1.0.0
 
 - Add `vibex hotkey install` with shell snippets for `bash`, `zsh`, `fish`, and `powershell`.

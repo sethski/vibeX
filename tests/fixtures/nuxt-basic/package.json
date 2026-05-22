@@ -1,0 +1,11 @@
+{
+  "name": "nuxt-basic",
+  "private": true,
+  "dependencies": {
+    "nuxt": "3.14.0",
+    "typescript": "5.0.0"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}
