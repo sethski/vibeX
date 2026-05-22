@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.6 MVP:
+v0.7 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -20,6 +20,8 @@ v0.6 MVP:
 - Confidence scores per context item in preview output
 - `vibex explain --json` for decision traces
 - Low-confidence fallback prompt policy
+- Diff intelligence with compact high-signal summaries
+- Error intelligence with fingerprint dedupe
 - Localhost `/optimize` API
 - Localhost `/preview` API
 - Local-only processing with no telemetry and no external LLM calls

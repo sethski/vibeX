@@ -1,6 +1,6 @@
 {
   "name": "vibex",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Local-first prompt optimizer and context bridge for AI coding tools.",
   "type": "module",
   "license": "MIT",

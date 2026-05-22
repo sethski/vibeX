@@ -33,7 +33,7 @@ export async function grabContext(options: ContextGrabberOptions = {}): Promise<
 async function gitSummary(root: string): Promise<string> {
   try {
     const { stdout } = await execFileAsync("git", ["diff", "--stat"], { cwd: root, timeout: 1500 });
-    return stdout.trim();
+    return summarizeDiffStat(stdout.trim());
   } catch {
     return "";
   }
@@ -42,10 +42,48 @@ async function gitSummary(root: string): Promise<string> {
 async function recentErrors(root: string): Promise<string[]> {
   try {
     const content = await readFile(join(root, ".vibex", "last-error.log"), "utf8");
-    return content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).slice(-3);
+    return dedupeAndRankErrors(content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
   } catch {
     return [];
   }
+}
+
+export function summarizeDiffStat(diffStat: string): string {
+  if (!diffStat.trim()) {
+    return "";
+  }
+  const lines = diffStat.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const fileLines = lines.filter((line) => line.includes("|"));
+  const totalLine = lines.find((line) => /files? changed/.test(line)) ?? "";
+  const compact = fileLines
+    .map((line) => {
+      const [file, changes] = line.split("|").map((part) => part.trim());
+      const score = (changes.match(/\+/g)?.length ?? 0) + (changes.match(/-/g)?.length ?? 0);
+      return { file: file.replace(/\\/g, "/"), score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map((item) => `${item.file} (+${item.score})`)
+    .join(", ");
+
+  return totalLine ? `${compact} | ${totalLine}` : compact;
+}
+
+export function dedupeAndRankErrors(lines: string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const line of lines) {
+    const fingerprint = fingerprintError(line);
+    if (seen.has(fingerprint)) {
+      continue;
+    }
+    seen.add(fingerprint);
+    unique.push(line);
+    if (unique.length === 3) {
+      break;
+    }
+  }
+  return unique;
 }
 
 async function findImportNeighbors(
@@ -126,4 +164,12 @@ function toProjectPath(root: string, absolutePath: string): string {
   const normalizedPath = normalize(absolutePath);
   const relative = normalizedPath.startsWith(normalizedRoot) ? normalizedPath.slice(normalizedRoot.length + 1) : normalizedPath;
   return relative.replace(/\\/g, "/");
+}
+
+function fingerprintError(line: string): string {
+  return line
+    .replace(/\d+/g, "#")
+    .replace(/[A-Za-z]:\\[^ ]+/g, "<path>")
+    .replace(/\/[^ ]+/g, "<path>")
+    .toLowerCase();
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0
+
+- Add compact diff-stat summarization prioritizing highest-signal changed files.
+- Add terminal error fingerprint deduplication to reduce repeated noise.
+- Integrate diff/error intelligence directly into context grabbing.
+- Add dedicated tests for diff summarization and error dedupe behavior.
+
 ## 0.6.0
 
 - Add context confidence scoring in preview/explain output.
