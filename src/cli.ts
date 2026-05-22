@@ -12,10 +12,39 @@ import type { CompressionOptions, ContextKey, ProjectContext, TargetProfile } fr
 const args = process.argv.slice(2);
 
 async function main(): Promise<void> {
+  const json = consumeFlag("--json");
+  const explain = consumeFlag("--explain");
+
   if (args[0] === "scan") {
+    args.shift();
     const memory = await scanProject(process.cwd());
-    await saveProjectMemory(process.cwd(), memory);
-    console.log(`Scanned ${memory.root}`);
+    if (json) {
+      console.log(JSON.stringify(memory, null, 2));
+    } else {
+      await saveProjectMemory(process.cwd(), memory);
+      console.log(`Scanned ${memory.root}`);
+    }
+    return;
+  }
+
+  if (args[0] === "context") {
+    args.shift();
+    const activeFile = consumeOption("--active-file");
+    const cursorLineValue = consumeOption("--cursor-line");
+    const cursorLine = cursorLineValue ? Number(cursorLineValue) : undefined;
+    const context = await grabContext({ root: process.cwd(), activeFile, cursorLine });
+    if (json) {
+      console.log(JSON.stringify(context, null, 2));
+    } else {
+      console.log(JSON.stringify({
+        root: context.root,
+        stack: context.stack,
+        framework: context.framework,
+        packageManager: context.packageManager,
+        activeFile: context.activeFile,
+        importNeighbors: context.importNeighbors
+      }, null, 2));
+    }
     return;
   }
 
@@ -30,8 +59,6 @@ async function main(): Promise<void> {
     return;
   }
 
-  const json = consumeFlag("--json");
-  const explain = consumeFlag("--explain");
   if (args[0] === "doctor") {
     args.shift();
     const report = await runDoctor(process.cwd());

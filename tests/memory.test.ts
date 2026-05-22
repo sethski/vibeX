@@ -20,9 +20,46 @@ test("scans package metadata into local project memory", async () => {
   const memory = await scanProject(root);
 
   assert.equal(memory.packageManager, "npm@10.0.0");
+  assert.equal(memory.framework, "vite-react");
   assert.deepEqual(memory.stack.sort(), ["react", "vite", "vitest"]);
   assert.equal(memory.scripts.test, "vitest");
   assert.equal(memory.likelyTestCommand, "npm test");
+
+  await rm(root, { recursive: true, force: true });
+});
+
+test("detects package manager from lockfile and tsconfig aliases", async () => {
+  const root = await mkdtemp(join(tmpdir(), "vibex-memory-lock-"));
+  await writeFile(
+    join(root, "package.json"),
+    JSON.stringify({
+      dependencies: { next: "15.0.0", react: "19.0.0" },
+      scripts: { test: "vitest" }
+    })
+  );
+  await writeFile(join(root, "pnpm-lock.yaml"), "lockfileVersion: '9.0'");
+  await writeFile(
+    join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        baseUrl: ".",
+        paths: {
+          "@/*": ["src/*"],
+          "@lib/*": ["lib/*"]
+        }
+      }
+    })
+  );
+  await writeFile(join(root, "src.placeholder"), "");
+  await writeFile(join(root, "tests.placeholder"), "");
+
+  const memory = await scanProject(root);
+
+  assert.equal(memory.packageManager, "pnpm");
+  assert.equal(memory.framework, "nextjs");
+  assert.equal(memory.likelyTestCommand, "pnpm test");
+  assert.deepEqual(memory.aliases["@"], ["src"]);
+  assert.deepEqual(memory.aliases["@lib"], ["lib"]);
 
   await rm(root, { recursive: true, force: true });
 });

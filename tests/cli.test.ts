@@ -43,3 +43,26 @@ test("cli preview prints JSON context report", async () => {
   assert.match(body.optimized, /Stack: node/);
   assert.deepEqual(body.context.filter((item) => item.included).map((item) => item.key), ["stack", "file"]);
 });
+
+test("cli scan supports json output", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "scan", "--json"]);
+  const body = JSON.parse(stdout) as { root: string; stack: string[] };
+
+  assert.equal(typeof body.root, "string");
+  assert.equal(Array.isArray(body.stack), true);
+});
+
+test("cli context prints json context snapshot", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "context",
+    "--json",
+    "--active-file",
+    "src/cli.ts"
+  ]);
+  const body = JSON.parse(stdout) as { root: string; stack: string[]; importNeighbors: string[] };
+
+  assert.equal(typeof body.root, "string");
+  assert.equal(Array.isArray(body.stack), true);
+  assert.equal(Array.isArray(body.importNeighbors), true);
+});

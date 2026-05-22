@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.3 MVP:
+v0.4 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -15,6 +15,7 @@ v0.3 MVP:
 - `vibex doctor` environment checks
 - Optional clipboard output with `--copy`
 - Preview mode with include/exclude context controls
+- Context engine: package manager, framework, source/test roots, tsconfig aliases, import neighbors
 - Localhost `/optimize` API
 - Localhost `/preview` API
 - Local-only processing with no telemetry and no external LLM calls
@@ -43,8 +44,16 @@ Scan project memory:
 
 ```bash
 node dist/src/cli.js scan
+node dist/src/cli.js scan --json
 node dist/src/cli.js cache show
 node dist/src/cli.js cache clear
+```
+
+Context snapshot:
+
+```bash
+node dist/src/cli.js context --json
+node dist/src/cli.js context --json --active-file src/cli.ts
 ```
 
 JSON output:
@@ -114,10 +123,13 @@ curl -X POST http://127.0.0.1:7742/optimize \
 `vibex scan` writes `.vibex/cache.json`. The cache stores derived repo metadata only:
 
 - stack names
+- framework identifier
 - package manager
 - npm scripts
 - likely test command
 - source roots
+- test roots
+- tsconfig aliases
 - framework marker files
 
 It does not store raw prompts, chat text, clipboard text, terminal history, secrets, or source file contents. `.vibex/` is gitignored by default.
@@ -138,6 +150,7 @@ npm run pack:dry
 - VS Code/Cursor extension wrapper
 - Terminal shell integration
 - Optional clipboard and hotkey helpers
+- Project fixtures for framework-specific context detection
 
 ## License
 

@@ -33,20 +33,26 @@ export async function scanProject(root: string): Promise<ProjectMemory> {
     }
   }
 
-  const sourceRoots = await existingPaths(root, ["src", "app", "pages", "core", "bridge"]);
-  const frameworkFiles = await existingPaths(root, ["package.json", "tsconfig.json", "vite.config.ts", "next.config.js"]);
+  const packageManager = await detectPackageManager(root, packageJson.packageManager);
+  const sourceRoots = await existingDirectories(root, ["src", "app", "pages", "core", "bridge", "lib"]);
+  const testRoots = await existingDirectories(root, ["test", "tests", "__tests__", "spec"]);
+  const frameworkFiles = await existingFiles(root, ["package.json", "tsconfig.json", "vite.config.ts", "next.config.js", "svelte.config.js"]);
   const scripts = normalizeScripts(packageJson.scripts);
+  const aliases = await parseAliases(root);
+  const framework = detectFramework(allDeps, frameworkFiles);
 
   return {
     version: 1,
     root,
     scannedAt: new Date().toISOString(),
     stack: [...stack].sort(),
-    packageManager: typeof packageJson.packageManager === "string" ? packageJson.packageManager : undefined,
+    packageManager,
+    framework,
     scripts,
-    likelyTestCommand: inferTestCommand(scripts),
+    likelyTestCommand: inferTestCommand(scripts, packageManager),
     sourceRoots,
-    aliases: {},
+    testRoots,
+    aliases,
     frameworkFiles
   };
 }
@@ -90,25 +96,139 @@ function normalizeScripts(value: unknown): Record<string, string> {
   return scripts;
 }
 
-function inferTestCommand(scripts: Record<string, string>): string | undefined {
+function inferTestCommand(scripts: Record<string, string>, packageManager?: string): string | undefined {
+  const manager = basePackageManager(packageManager);
+  const run = manager === "pnpm" ? "pnpm" : manager === "yarn" ? "yarn" : manager === "bun" ? "bun" : "npm run";
+  const test = manager === "pnpm" ? "pnpm test" : manager === "yarn" ? "yarn test" : manager === "bun" ? "bun test" : "npm test";
+
   if (scripts.test) {
-    return "npm test";
+    return test;
   }
   if (scripts["test:unit"]) {
-    return "npm run test:unit";
+    return `${run} test:unit`;
   }
   return undefined;
 }
 
-async function existingPaths(root: string, names: string[]): Promise<string[]> {
+async function existingDirectories(root: string, names: string[]): Promise<string[]> {
   const found: string[] = [];
   for (const name of names) {
     try {
-      await stat(join(root, name));
-      found.push(name);
+      const file = await stat(join(root, name));
+      if (file.isDirectory()) {
+        found.push(name);
+      }
     } catch {
       // Missing project markers are normal.
     }
   }
   return found;
+}
+
+async function existingFiles(root: string, names: string[]): Promise<string[]> {
+  const found: string[] = [];
+  for (const name of names) {
+    try {
+      const file = await stat(join(root, name));
+      if (file.isFile()) {
+        found.push(name);
+      }
+    } catch {
+      // Missing project markers are normal.
+    }
+  }
+  return found;
+}
+
+async function detectPackageManager(root: string, packageManagerField: unknown): Promise<string | undefined> {
+  if (typeof packageManagerField === "string" && packageManagerField.trim()) {
+    return packageManagerField.trim();
+  }
+  if (await exists(root, "pnpm-lock.yaml")) {
+    return "pnpm";
+  }
+  if (await exists(root, "yarn.lock")) {
+    return "yarn";
+  }
+  if (await exists(root, "bun.lockb") || await exists(root, "bun.lock")) {
+    return "bun";
+  }
+  if (await exists(root, "package-lock.json")) {
+    return "npm";
+  }
+  return undefined;
+}
+
+function basePackageManager(manager?: string): "npm" | "pnpm" | "yarn" | "bun" {
+  if (!manager) {
+    return "npm";
+  }
+  if (manager.startsWith("pnpm")) {
+    return "pnpm";
+  }
+  if (manager.startsWith("yarn")) {
+    return "yarn";
+  }
+  if (manager.startsWith("bun")) {
+    return "bun";
+  }
+  return "npm";
+}
+
+async function parseAliases(root: string): Promise<Record<string, string[]>> {
+  try {
+    const raw = JSON.parse(await readFile(join(root, "tsconfig.json"), "utf8")) as {
+      compilerOptions?: { paths?: Record<string, string[]> };
+    };
+    const paths = raw.compilerOptions?.paths ?? {};
+    const aliases: Record<string, string[]> = {};
+    for (const [key, values] of Object.entries(paths)) {
+      const cleanedKey = key.replace(/\/\*$/, "");
+      aliases[cleanedKey] = values.map((value) => value.replace(/\/\*$/, ""));
+    }
+    return aliases;
+  } catch {
+    return {};
+  }
+}
+
+function detectFramework(deps: Record<string, unknown>, files: string[]): string {
+  const has = (name: string): boolean => Object.prototype.hasOwnProperty.call(deps, name);
+  if (has("next")) {
+    return "nextjs";
+  }
+  if (has("@sveltejs/kit")) {
+    return "sveltekit";
+  }
+  if (has("vite") && has("react")) {
+    return "vite-react";
+  }
+  if (has("vite") && has("vue")) {
+    return "vite-vue";
+  }
+  if (has("vite")) {
+    return "vite";
+  }
+  if (has("@angular/core")) {
+    return "angular";
+  }
+  if (has("react")) {
+    return "react";
+  }
+  if (has("vue")) {
+    return "vue";
+  }
+  if (has("typescript") || files.includes("tsconfig.json")) {
+    return "typescript";
+  }
+  return "node";
+}
+
+async function exists(root: string, file: string): Promise<boolean> {
+  try {
+    await stat(join(root, file));
+    return true;
+  } catch {
+    return false;
+  }
 }

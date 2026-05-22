@@ -9,6 +9,11 @@ export interface AnalysisResult {
 export interface ProjectContext {
   root: string;
   stack: string[];
+  packageManager?: string;
+  framework?: string;
+  sourceRoots?: string[];
+  testRoots?: string[];
+  aliases?: Record<string, string[]>;
   activeFile?: string;
   cursorLine?: number;
   gitSummary: string;
@@ -67,9 +72,11 @@ export interface ProjectMemory {
   scannedAt: string;
   stack: string[];
   packageManager?: string;
+  framework: string;
   scripts: Record<string, string>;
   likelyTestCommand?: string;
   sourceRoots: string[];
+  testRoots: string[];
   aliases: Record<string, string[]>;
   frameworkFiles: string[];
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- Add context engine upgrades: package manager detection, framework detection, source/test roots, and tsconfig alias parsing.
+- Add import-neighbor discovery from active file imports (relative and alias-based).
+- Add `vibex scan --json`.
+- Add `vibex context --json` with optional `--active-file` and `--cursor-line`.
+- Add fixture-style tests for context grabber and memory detection.
+
 ## 0.3.0
 
 - Add `vibex preview` with JSON and text output.
