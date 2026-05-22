@@ -1,5 +1,6 @@
 import { DEBUG_TRIGGER_WORDS, DEFAULT_MAX_TOKENS, FILLER_WORDS } from "../config/defaults.js";
 import type { CompressionOptions, CompressionResult, ProjectContext } from "../types.js";
+import { estimateTokenCount } from "./tokens.js";
 
 export function compressPrompt(raw: string, context: ProjectContext, _options: CompressionOptions = {}): CompressionResult {
   const maxTokens = DEFAULT_MAX_TOKENS;
@@ -22,14 +23,14 @@ export function compressPrompt(raw: string, context: ProjectContext, _options: C
     contextUsed.push("recentErrors");
   }
 
-  if (context.gitSummary.trim()) {
-    parts.push(`Diff: ${context.gitSummary.trim()}`);
-    contextUsed.push("gitSummary");
-  }
-
   if (context.importNeighbors.length > 0) {
     parts.push(`Neighbors: ${context.importNeighbors.slice(0, 2).join(" ")}`);
     contextUsed.push("importNeighbors");
+  }
+
+  if (context.gitSummary.trim()) {
+    parts.push(`Diff: ${context.gitSummary.trim()}`);
+    contextUsed.push("gitSummary");
   }
 
   parts.push("Preserve existing style/tests. Output changed lines only. No markdown.");
@@ -59,7 +60,7 @@ function trimToBudget(parts: string[], maxTokens: number, contextUsed: string[])
   const removableLabels = ["Diff:", "Neighbors:", "Error:"];
 
   for (const label of removableLabels) {
-    if (estimateTokens(mutable.join(" | ")) <= maxTokens) {
+    if (estimateTokenCount(mutable.join(" | ")) <= maxTokens) {
       break;
     }
     const index = mutable.findIndex((part) => part.startsWith(label));
@@ -70,13 +71,13 @@ function trimToBudget(parts: string[], maxTokens: number, contextUsed: string[])
   }
 
   let optimized = mutable.join(" | ");
-  while (estimateTokens(optimized) > maxTokens && optimized.includes(" ")) {
+  while (estimateTokenCount(optimized) > maxTokens && optimized.includes(" ")) {
     optimized = optimized.split(/\s+/).slice(0, -1).join(" ");
   }
 
   return {
     optimized,
-    tokenEstimate: estimateTokens(optimized),
+    tokenEstimate: estimateTokenCount(optimized),
     contextUsed
   };
 }
@@ -91,10 +92,6 @@ function removeContextLabel(label: string, contextUsed: string[]): void {
   if (index >= 0) {
     contextUsed.splice(index, 1);
   }
-}
-
-function estimateTokens(text: string): number {
-  return Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.25);
 }
 
 function escapeRegExp(value: string): string {

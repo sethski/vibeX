@@ -7,6 +7,7 @@ import { createPreview } from "./core/preview.js";
 import { clearProjectMemory, loadProjectMemory, saveProjectMemory, scanProject } from "./core/memory.js";
 import { isTargetProfile } from "./core/profiles.js";
 import { grabContext } from "./core/context-grabber.js";
+import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
 import type { CompressionOptions, ContextKey, ProjectContext, TargetProfile } from "./types.js";
 
 const args = process.argv.slice(2);
@@ -67,6 +68,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  const compareMode = args[0] === "compare";
+  if (compareMode) {
+    args.shift();
+  }
+
   const previewMode = args[0] === "preview";
   if (previewMode) {
     args.shift();
@@ -85,13 +91,25 @@ async function main(): Promise<void> {
     ? createPreview(prompt, await resolveContext(context), options).optimized
     : await optimizePrompt(prompt, context, options);
   const preview = previewMode ? createPreview(prompt, await resolveContext(context), options) : undefined;
+  const compareOptimized = compareMode ? enforceTokenEfficiency(prompt, optimized) : optimized;
+  const compare = compareMode ? compareTokenUsage(prompt, compareOptimized) : undefined;
 
   if (copy) {
     await copyToClipboard(optimized);
   }
 
   if (json) {
-    console.log(JSON.stringify(preview ? { ...preview, copied: copy, target } : { optimized, copied: copy, target }, null, 2));
+    const output = preview
+      ? { ...preview, copied: copy, target }
+      : compare
+      ? { optimized: compareOptimized, copied: copy, target, ...compare }
+      : { optimized, copied: copy, target };
+    console.log(JSON.stringify(output, null, 2));
+    return;
+  }
+
+  if (compare) {
+    console.log(formatCompare(compare.rawTokens, compare.optimizedTokens, compare.reductionPercent, compareOptimized));
     return;
   }
 
@@ -185,6 +203,24 @@ function formatPreview(optimized: string, context: Array<{ key: string; included
     lines.push(`${item.included ? "IN" : "OUT"} ${item.key}${item.reason ? ` - ${item.reason}` : ""}`);
   }
   return lines.join("\n");
+}
+
+function formatCompare(rawTokens: number, optimizedTokens: number, reductionPercent: number, optimized: string): string {
+  return [
+    `Raw tokens: ${rawTokens}`,
+    `Optimized tokens: ${optimizedTokens}`,
+    `Reduction: ${reductionPercent}%`,
+    "",
+    "Optimized:",
+    optimized
+  ].join("\n");
+}
+
+function enforceTokenEfficiency(raw: string, optimized: string): string {
+  if (estimateTokenCount(optimized) <= estimateTokenCount(raw)) {
+    return optimized;
+  }
+  return compactPrompt(raw);
 }
 
 function isContextKey(value: string): value is ContextKey {

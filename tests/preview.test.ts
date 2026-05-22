@@ -43,3 +43,10 @@ test("preview does not include raw prompt in context details", () => {
 
   assert.equal(JSON.stringify(preview.context).includes("SECRET_TOKEN"), false);
 });
+
+test("preview context order follows ranking", () => {
+  const preview = createPreview("fix auth crash", context, { explain: true });
+  const keys = preview.context.map((item) => item.key);
+
+  assert.deepEqual(keys, ["stack", "file", "error", "neighbors", "diff"]);
+});

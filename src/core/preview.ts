@@ -39,9 +39,9 @@ function describeContext(
       "Active file anchors the request.",
       options
     ),
-    item("diff", "Diff", context.gitSummary, used.includes("gitSummary"), "Git diff summary is included only when useful and trimmed first.", options),
     item("error", "Error", context.recentErrors.at(-1) ?? "", used.includes("recentErrors"), "Recent terminal error is included for debug-like prompts.", options),
-    item("neighbors", "Neighbors", context.importNeighbors.slice(0, 2).join(" "), used.includes("importNeighbors"), "Import neighbors provide nearby code context.", options)
+    item("neighbors", "Neighbors", context.importNeighbors.slice(0, 2).join(" "), used.includes("importNeighbors"), "Import neighbors provide nearby code context.", options),
+    item("diff", "Diff", context.gitSummary, used.includes("gitSummary"), "Git diff summary is included only when useful and trimmed first.", options)
   ];
 }
 

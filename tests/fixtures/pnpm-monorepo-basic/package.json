@@ -1,0 +1,7 @@
+{
+  "name": "pnpm-monorepo-basic",
+  "private": true,
+  "dependencies": {
+    "typescript": "5.0.0"
+  }
+}

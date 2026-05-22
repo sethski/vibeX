@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.4 MVP:
+v0.5 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -16,6 +16,7 @@ v0.4 MVP:
 - Optional clipboard output with `--copy`
 - Preview mode with include/exclude context controls
 - Context engine: package manager, framework, source/test roots, tsconfig aliases, import neighbors
+- `vibex compare --json` for raw vs optimized token estimates
 - Localhost `/optimize` API
 - Localhost `/preview` API
 - Local-only processing with no telemetry and no external LLM calls
@@ -54,6 +55,12 @@ Context snapshot:
 ```bash
 node dist/src/cli.js context --json
 node dist/src/cli.js context --json --active-file src/cli.ts
+```
+
+Compare prompt token usage:
+
+```bash
+node dist/src/cli.js compare --json "please fix auth redirect issue"
 ```
 
 JSON output:
@@ -141,6 +148,7 @@ npm test
 npm run typecheck
 npm run build
 npm run pack:dry
+npm run bench:context
 ```
 
 ## Roadmap

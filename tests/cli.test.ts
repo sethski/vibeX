@@ -66,3 +66,34 @@ test("cli context prints json context snapshot", async () => {
   assert.equal(Array.isArray(body.stack), true);
   assert.equal(Array.isArray(body.importNeighbors), true);
 });
+
+test("cli compare returns token reduction json", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "compare", "--json", "please fix auth redirect issue"]);
+  const body = JSON.parse(stdout) as {
+    rawTokens: number;
+    optimizedTokens: number;
+    reductionPercent: number;
+    optimized: string;
+  };
+
+  assert.equal(typeof body.rawTokens, "number");
+  assert.equal(typeof body.optimizedTokens, "number");
+  assert.equal(typeof body.reductionPercent, "number");
+  assert.equal(body.optimizedTokens <= body.rawTokens, true);
+  assert.match(body.optimized, /^Fix auth redirect issue/);
+});
+
+test("json commands do not leak secrets from prompt into context metadata", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "preview",
+    "--json",
+    "--explain",
+    "fix auth SECRET_TOKEN=abc123"
+  ]);
+  const body = JSON.parse(stdout) as { context: unknown };
+  const text = JSON.stringify(body.context);
+
+  assert.equal(text.includes("SECRET_TOKEN"), false);
+  assert.equal(text.includes("abc123"), false);
+});

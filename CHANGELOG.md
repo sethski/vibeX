@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Add fixture-based context tests for Next.js, Vite React, and pnpm monorepo shapes.
+- Add `vibex compare --json` with token counts and reduction percentage.
+- Add context ranking alignment across preview/compression (`stack`, `file`, `error`, `neighbors`, `diff`).
+- Add benchmark script `npm run bench:context` for scan/context latency checks.
+- Extend CLI privacy coverage for JSON outputs.
+
 ## 0.4.0
 
 - Add context engine upgrades: package manager detection, framework detection, source/test roots, and tsconfig alias parsing.
