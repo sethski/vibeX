@@ -2,6 +2,7 @@ import { createServer as createHttpServer, type IncomingMessage, type ServerResp
 import { analyzePrompt } from "../core/analyzer.js";
 import { compressPrompt } from "../core/compressor.js";
 import { grabContext } from "../core/context-grabber.js";
+import { loadRepoConfig } from "../core/repo-config.js";
 import { applyTargetProfile } from "../core/profiles.js";
 import { createPreview, filterContext } from "../core/preview.js";
 import { createBrowserBridgePayload } from "../plugins/browser.js";
@@ -58,6 +59,7 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
       }
 
       const baseContext = await grabContext({ root: payload.context?.root });
+      const repoConfig = await loadRepoConfig(baseContext.root);
       const context: ProjectContext = {
         ...baseContext,
         ...payload.context,
@@ -67,10 +69,14 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
         recentErrors: payload.context?.recentErrors ?? baseContext.recentErrors,
         importNeighbors: payload.context?.importNeighbors ?? baseContext.importNeighbors
       };
+      const options: CompressionOptions = {
+        ...(payload.options ?? {}),
+        policy: payload.options?.policy ?? repoConfig.policy
+      };
       const analysis = analyzePrompt(payload.prompt);
-      const preview = createPreview(payload.prompt, context, payload.options);
-      const compressed = url === "/preview" ? preview : compressPrompt(payload.prompt, filterContext(context, payload.options), payload.options);
-      const optimized = applyTargetProfile(compressed.optimized, payload.options?.target);
+      const preview = createPreview(payload.prompt, context, options);
+      const compressed = url === "/preview" ? preview : compressPrompt(payload.prompt, filterContext(context, options), options);
+      const optimized = applyTargetProfile(compressed.optimized, options.target);
 
       if (url === "/bridge/ide") {
         return json(200, createIdeBridgePayload(optimized));
@@ -83,7 +89,7 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
         });
       }
       if (url === "/bridge/browser") {
-        return json(200, createBrowserBridgePayload(optimized, payload.options?.target ?? "codex"));
+        return json(200, createBrowserBridgePayload(optimized, options.target ?? "codex"));
       }
 
       return json(200, {

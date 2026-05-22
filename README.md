@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v1.5 MVP:
+v1.6 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -18,6 +18,7 @@ v1.5 MVP:
 - Context engine: package manager, framework, source/test roots, tsconfig aliases, import neighbors
 - Framework fixtures for Next.js, Vite React, pnpm monorepo, Angular, SvelteKit, and Nuxt
 - `vibex compare --json` for raw vs optimized token estimates
+- Prompt policy system (`strict`, `balanced`, `minimal`) with per-repo defaults
 - Confidence scores per context item in preview output
 - `vibex explain --json` for decision traces
 - Low-confidence fallback prompt policy
@@ -79,6 +80,14 @@ Compare prompt token usage:
 
 ```bash
 node dist/src/cli.js compare --json "please fix auth redirect issue"
+```
+
+Policy:
+
+```bash
+node dist/src/cli.js policy show
+node dist/src/cli.js policy set strict
+node dist/src/cli.js --policy minimal "fix auth"
 ```
 
 JSON output:
@@ -223,7 +232,15 @@ npm run bench:context
 
 ## Roadmap
 
-- Desktop-native global listener process
+- Stable Core release hardening pack (contracts + migration notes + benchmark baselines)
+- Team config and governance layer
+- Quality scoring and regression gates
+- Plugin/Hook SDK
+- Incremental performance pass
+- Security and compliance hardening
+- Multi-language deep support
+- Local-only telemetry dashboard (opt-in)
+- Platform maturity release
 
 ## License
 

@@ -49,3 +49,40 @@ test("keeps prompt within default token budget", () => {
 
   assert.equal(result.tokenEstimate <= 120, true);
 });
+
+test("minimal policy suppresses diff and neighbors", () => {
+  const result = compressPrompt(
+    "fix auth redirect",
+    {
+      root: "/repo",
+      stack: ["next"],
+      activeFile: "src/auth.ts",
+      gitSummary: "src/auth.ts (+12) | 1 file changed",
+      recentErrors: ["TypeError: redirect"],
+      importNeighbors: ["src/a.ts", "src/b.ts"]
+    },
+    { policy: "minimal" }
+  );
+
+  assert.doesNotMatch(result.optimized, /Diff:/);
+  assert.doesNotMatch(result.optimized, /Neighbors:/);
+});
+
+test("strict policy includes diff and error context", () => {
+  const result = compressPrompt(
+    "refactor auth module",
+    {
+      root: "/repo",
+      stack: ["next"],
+      activeFile: "src/auth.ts",
+      gitSummary: "src/auth.ts (+12) | 1 file changed",
+      recentErrors: ["TypeError: redirect"],
+      importNeighbors: []
+    },
+    { policy: "strict" }
+  );
+
+  assert.match(result.optimized, /Diff:/);
+  assert.match(result.optimized, /Error:/);
+  assert.match(result.optimized, /deterministic/i);
+});

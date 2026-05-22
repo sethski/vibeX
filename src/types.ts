@@ -24,9 +24,11 @@ export interface ProjectContext {
 }
 
 export type ContextKey = "stack" | "file" | "diff" | "error" | "neighbors";
+export type PolicyMode = "strict" | "balanced" | "minimal";
 
 export interface CompressionOptions {
   target?: TargetProfile;
+  policy?: PolicyMode;
   include?: ContextKey[];
   exclude?: ContextKey[];
   explain?: boolean;

@@ -264,3 +264,16 @@ test("cli hotkey profile set/show/clear", async () => {
 
   await rm(cwd, { recursive: true, force: true });
 });
+
+test("cli policy set/show", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "vibex-policy-cli-"));
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ name: "tmp", private: true }));
+  const cliPath = join(process.cwd(), "dist", "src", "cli.js");
+
+  await execFileAsync(process.execPath, [cliPath, "policy", "set", "minimal"], { cwd });
+  const showResult = await execFileAsync(process.execPath, [cliPath, "policy", "show"], { cwd });
+  const body = JSON.parse(showResult.stdout) as { policy: string };
+
+  assert.equal(body.policy, "minimal");
+  await rm(cwd, { recursive: true, force: true });
+});

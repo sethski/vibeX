@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.0
+
+- Add prompt policy system with `strict`, `balanced`, and `minimal` modes.
+- Add per-repo default policy config in `.vibex/config.json`.
+- Add CLI policy controls:
+  - `vibex policy show`
+  - `vibex policy set <strict|balanced|minimal>`
+- Wire policy defaults into CLI and API optimization paths with `--policy` override support.
+- Add policy validation and coverage in compressor and CLI tests.
+
 ## 1.5.0
 
 - Add persistent hotkey profiles in `.vibex/hotkey.json`.

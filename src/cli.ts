@@ -4,7 +4,9 @@ import { spawn } from "node:child_process";
 import { formatDoctorReport, runDoctor } from "./core/doctor.js";
 import { optimizePrompt } from "./core/formatter.js";
 import { createPreview } from "./core/preview.js";
+import { loadRepoConfig, saveRepoConfig } from "./core/repo-config.js";
 import { clearProjectMemory, loadProjectMemory, saveProjectMemory, scanProject } from "./core/memory.js";
+import { isPolicyMode } from "./core/policy.js";
 import { isTargetProfile } from "./core/profiles.js";
 import { grabContext } from "./core/context-grabber.js";
 import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
@@ -20,7 +22,7 @@ import {
   isShellKind,
   type ShellKind
 } from "./plugins/terminal.js";
-import type { CompressionOptions, ContextKey, ProjectContext, TargetProfile } from "./types.js";
+import type { CompressionOptions, ContextKey, PolicyMode, ProjectContext, TargetProfile } from "./types.js";
 
 const args = process.argv.slice(2);
 
@@ -80,6 +82,27 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args[0] === "policy") {
+    args.shift();
+    const action = args.shift() ?? "show";
+    if (action === "show") {
+      console.log(JSON.stringify(await loadRepoConfig(process.cwd()), null, 2));
+      return;
+    }
+    if (action === "set") {
+      const value = args.shift();
+      if (!value || !isPolicyMode(value)) {
+        throw new Error("Policy must be one of: strict, balanced, minimal");
+      }
+      const current = await loadRepoConfig(process.cwd());
+      const next = { ...current, policy: value };
+      await saveRepoConfig(process.cwd(), next);
+      console.log(json ? JSON.stringify(next, null, 2) : `Policy set to ${value}`);
+      return;
+    }
+    throw new Error(`Unsupported policy command: ${action}`);
+  }
+
   if (args[0] === "terminal") {
     args.shift();
     const subcommand = args.shift() ?? "preview";
@@ -100,13 +123,14 @@ async function main(): Promise<void> {
 
     const copy = consumeFlag("--copy");
     const target = consumeTarget();
+    const policy = consumePolicy(await loadRepoConfig(process.cwd()));
     const include = consumeContextKeys("--include");
     const exclude = consumeContextKeys("--exclude");
     const contextFile = consumeOption("--context-file");
     const contextJson = consumeOption("--context-json");
     const prompt = stripOuterQuotes(await resolvePromptArg(args));
     const context = await loadCliContext(contextFile, contextJson);
-    const optimized = await optimizePrompt(prompt, context, { target, include, exclude });
+    const optimized = await optimizePrompt(prompt, context, { target, policy, include, exclude });
     if (copy) {
       await copyToClipboard(optimized);
     }
@@ -164,6 +188,7 @@ async function main(): Promise<void> {
     if (subcommand === "listen") {
       const profile = await loadHotkeyProfile(process.cwd());
       const target = consumeOptionalTarget() ?? profile?.target ?? "codex";
+      const policy = consumePolicy(await loadRepoConfig(process.cwd()));
       const include = consumeContextKeys("--include") ?? profile?.include;
       const exclude = consumeContextKeys("--exclude") ?? profile?.exclude;
       const contextFile = consumeOption("--context-file");
@@ -177,7 +202,7 @@ async function main(): Promise<void> {
         context,
         include,
         exclude,
-        optimize: (prompt) => optimizePrompt(prompt, context, { target, include, exclude })
+        optimize: (prompt) => optimizePrompt(prompt, context, { target, policy, include, exclude })
       });
       return;
     }
@@ -216,13 +241,14 @@ async function main(): Promise<void> {
       throw new Error(`Unsupported ide command: ${subcommand}`);
     }
     const target = consumeTarget();
+    const policy = consumePolicy(await loadRepoConfig(process.cwd()));
     const include = consumeContextKeys("--include");
     const exclude = consumeContextKeys("--exclude");
     const contextFile = consumeOption("--context-file");
     const contextJson = consumeOption("--context-json");
     const prompt = stripOuterQuotes(await resolvePromptArg(args));
     const context = await loadCliContext(contextFile, contextJson);
-    const optimized = await optimizePrompt(prompt, context, { target, include, exclude });
+    const optimized = await optimizePrompt(prompt, context, { target, policy, include, exclude });
     const payload = createIdeBridgePayload(optimized);
     if (json) {
       console.log(JSON.stringify(payload, null, 2));
@@ -248,13 +274,14 @@ async function main(): Promise<void> {
       throw new Error(`Unsupported browser command: ${subcommand}`);
     }
     const target = consumeTarget();
+    const policy = consumePolicy(await loadRepoConfig(process.cwd()));
     const include = consumeContextKeys("--include");
     const exclude = consumeContextKeys("--exclude");
     const contextFile = consumeOption("--context-file");
     const contextJson = consumeOption("--context-json");
     const prompt = stripOuterQuotes(await resolvePromptArg(args));
     const context = await loadCliContext(contextFile, contextJson);
-    const optimized = await optimizePrompt(prompt, context, { target, include, exclude });
+    const optimized = await optimizePrompt(prompt, context, { target, policy, include, exclude });
     const payload = createBrowserBridgePayload(optimized, target);
     if (json) {
       console.log(JSON.stringify(payload, null, 2));
@@ -280,13 +307,14 @@ async function main(): Promise<void> {
 
   const copy = consumeFlag("--copy");
   const target = consumeTarget();
+  const policy = consumePolicy(await loadRepoConfig(process.cwd()));
   const include = consumeContextKeys("--include");
   const exclude = consumeContextKeys("--exclude");
   const contextFile = consumeOption("--context-file");
   const contextJson = consumeOption("--context-json");
   const prompt = stripOuterQuotes(await resolvePromptArg(args));
   const context = await loadCliContext(contextFile, contextJson);
-  const options: CompressionOptions = { target, include, exclude, explain };
+  const options: CompressionOptions = { target, policy, include, exclude, explain };
   const optimized = previewMode
     ? createPreview(prompt, await resolveContext(context), options).optimized
     : await optimizePrompt(prompt, context, options);
@@ -371,6 +399,17 @@ function consumeOptionalTarget(): TargetProfile | undefined {
   }
   if (!isTargetProfile(value)) {
     throw new Error(`Unsupported target: ${value}`);
+  }
+  return value;
+}
+
+function consumePolicy(defaults: { policy: PolicyMode }): PolicyMode {
+  const value = consumeOption("--policy");
+  if (!value) {
+    return defaults.policy;
+  }
+  if (!isPolicyMode(value)) {
+    throw new Error("Policy must be one of: strict, balanced, minimal");
   }
   return value;
 }
