@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+
+- Add editor wrapper installer command:
+  - `vibex ide install --editor vscode|cursor`
+- Add stable VS Code/Cursor integration snippets for `tasks.json` and `keybindings.json`.
+- Extend CLI coverage for editor install flows.
+
 ## 1.2.0
 
 - Add browser extension bridge command set:

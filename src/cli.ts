@@ -9,7 +9,7 @@ import { isTargetProfile } from "./core/profiles.js";
 import { grabContext } from "./core/context-grabber.js";
 import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
 import { browserInstallSnippet, createBrowserBridgePayload } from "./plugins/browser.js";
-import { createIdeBridgePayload } from "./plugins/ide-light.js";
+import { buildIdeInstallSnippet, createIdeBridgePayload, isEditorKind } from "./plugins/ide-light.js";
 import {
   buildShellHotkeySnippet,
   buildShellInstallSnippet,
@@ -133,9 +133,27 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (args[0] === "ide" && args[1] === "replace") {
+  if (args[0] === "ide") {
     args.shift();
-    args.shift();
+    const subcommand = args.shift() ?? "replace";
+    if (subcommand === "install") {
+      const editor = consumeOption("--editor") ?? "vscode";
+      if (!isEditorKind(editor)) {
+        throw new Error(`Unsupported editor: ${editor}`);
+      }
+      const snippet = buildIdeInstallSnippet(editor);
+      if (json) {
+        console.log(JSON.stringify(snippet, null, 2));
+      } else {
+        console.log(snippet.tasksJson);
+        console.log("");
+        console.log(snippet.keybindingsJson);
+      }
+      return;
+    }
+    if (subcommand !== "replace") {
+      throw new Error(`Unsupported ide command: ${subcommand}`);
+    }
     const target = consumeTarget();
     const include = consumeContextKeys("--include");
     const exclude = consumeContextKeys("--exclude");

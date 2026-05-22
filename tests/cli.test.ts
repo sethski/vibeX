@@ -151,6 +151,22 @@ test("cli ide replace returns bridge payload", async () => {
   assert.match(body.replacement.text, /^Fix auth/);
 });
 
+test("cli ide install returns editor snippets", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "ide",
+    "install",
+    "--json",
+    "--editor",
+    "cursor"
+  ]);
+  const body = JSON.parse(stdout) as { editor: string; tasksJson: string; keybindingsJson: string };
+
+  assert.equal(body.editor, "cursor");
+  assert.match(body.tasksJson, /vibex: optimize prompt/);
+  assert.match(body.keybindingsJson, /workbench\.action\.tasks\.runTask/);
+});
+
 test("cli hotkey install returns shell snippet", async () => {
   const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "hotkey", "install", "--json", "--shell", "zsh"]);
   const body = JSON.parse(stdout) as { shell: string; snippet: string };

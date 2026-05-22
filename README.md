@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v1.2 MVP:
+v1.3 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -27,7 +27,7 @@ v1.2 MVP:
 - Active-file package-root targeting for monorepos
 - Per-package project-memory cache files under `.vibex/`
 - Terminal bridge commands (`terminal install`, `terminal preview`)
-- IDE bridge command (`ide replace`)
+- IDE bridge commands (`ide replace`, `ide install`)
 - Hotkey helper command (`hotkey install`)
 - Stdin optimization flow for shell piping/hotkeys
 - Browser bridge commands (`browser install`, `browser bridge`)
@@ -129,6 +129,8 @@ IDE bridge:
 
 ```bash
 node dist/src/cli.js ide replace --json "fix auth"
+node dist/src/cli.js ide install --json --editor vscode
+node dist/src/cli.js ide install --json --editor cursor
 ```
 
 Hotkey helper:
@@ -216,7 +218,6 @@ npm run bench:context
 
 ## Roadmap
 
-- VS Code/Cursor extension wrapper
 - Native hotkey listeners
 
 ## License
