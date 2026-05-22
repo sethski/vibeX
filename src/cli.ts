@@ -9,6 +9,7 @@ import { isTargetProfile } from "./core/profiles.js";
 import { grabContext } from "./core/context-grabber.js";
 import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
 import { browserInstallSnippet, createBrowserBridgePayload } from "./plugins/browser.js";
+import { runHotkeyListener } from "./plugins/hotkey-listener.js";
 import { buildIdeInstallSnippet, createIdeBridgePayload, isEditorKind } from "./plugins/ide-light.js";
 import {
   buildShellHotkeySnippet,
@@ -120,6 +121,22 @@ async function main(): Promise<void> {
   if (args[0] === "hotkey") {
     args.shift();
     const subcommand = args.shift() ?? "install";
+    if (subcommand === "listen") {
+      const target = consumeTarget();
+      const include = consumeContextKeys("--include");
+      const exclude = consumeContextKeys("--exclude");
+      const contextFile = consumeOption("--context-file");
+      const contextJson = consumeOption("--context-json");
+      const context = await loadCliContext(contextFile, contextJson);
+      await runHotkeyListener({
+        target,
+        context,
+        include,
+        exclude,
+        optimize: (prompt) => optimizePrompt(prompt, context, { target, include, exclude })
+      });
+      return;
+    }
     if (subcommand !== "install") {
       throw new Error(`Unsupported hotkey command: ${subcommand}`);
     }

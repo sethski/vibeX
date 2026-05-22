@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0
+
+- Add native terminal hotkey listener mode:
+  - `vibex hotkey listen`
+- Add keypress-action parser for Ctrl+G optimize / Enter submit / Ctrl+C exit flows.
+- Add CLI guard for TTY-only listener execution and dedicated listener tests.
+
 ## 1.3.0
 
 - Add editor wrapper installer command:

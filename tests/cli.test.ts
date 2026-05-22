@@ -175,6 +175,15 @@ test("cli hotkey install returns shell snippet", async () => {
   assert.match(body.snippet, /bindkey '\^G' vibex-hotkey/);
 });
 
+test("cli hotkey listen requires interactive tty", () => {
+  const result = spawnSync(process.execPath, ["dist/src/cli.js", "hotkey", "listen"], {
+    encoding: "utf8"
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /interactive TTY/);
+});
+
 test("cli reads prompt from stdin when no positional prompt is provided", () => {
   const result = spawnSync(
     process.execPath,
