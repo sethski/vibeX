@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -149,4 +149,29 @@ test("cli ide replace returns bridge payload", async () => {
   assert.equal(body.version, 1);
   assert.equal(body.replacement.range, "active-input");
   assert.match(body.replacement.text, /^Fix auth/);
+});
+
+test("cli hotkey install returns shell snippet", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "hotkey", "install", "--json", "--shell", "zsh"]);
+  const body = JSON.parse(stdout) as { shell: string; snippet: string };
+
+  assert.equal(body.shell, "zsh");
+  assert.match(body.snippet, /bindkey '\^G' vibex-hotkey/);
+});
+
+test("cli reads prompt from stdin when no positional prompt is provided", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "dist/src/cli.js",
+      "--json",
+      "--context-json",
+      JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts" })
+    ],
+    { encoding: "utf8", input: "fix auth from stdin\n" }
+  );
+
+  assert.equal(result.status, 0);
+  const body = JSON.parse(result.stdout) as { optimized: string };
+  assert.match(body.optimized, /^Fix auth from stdin/);
 });

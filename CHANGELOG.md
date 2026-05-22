@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0
+
+- Add `vibex hotkey install` with shell snippets for `bash`, `zsh`, `fish`, and `powershell`.
+- Add stdin prompt support so `vibex` can optimize piped input without positional prompt args.
+- Add CLI tests for hotkey snippet output and stdin optimization flow.
+
 ## 0.9.0
 
 - Add `vibex terminal install` to print shell wrapper snippets (`bash`, `zsh`, `fish`, `powershell`).

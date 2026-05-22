@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.9 MVP:
+v1.0 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -27,6 +27,8 @@ v0.9 MVP:
 - Per-package project-memory cache files under `.vibex/`
 - Terminal bridge commands (`terminal install`, `terminal preview`)
 - IDE bridge command (`ide replace`)
+- Hotkey helper command (`hotkey install`)
+- Stdin optimization flow for shell piping/hotkeys
 - Bridge API endpoints (`/bridge/ide`, `/bridge/terminal`)
 - Localhost `/optimize` API
 - Localhost `/preview` API
@@ -126,6 +128,19 @@ IDE bridge:
 node dist/src/cli.js ide replace --json "fix auth"
 ```
 
+Hotkey helper:
+
+```bash
+node dist/src/cli.js hotkey install --shell bash
+node dist/src/cli.js hotkey install --shell powershell
+```
+
+Stdin mode:
+
+```bash
+echo "fix auth middleware redirect loop" | node dist/src/cli.js --json
+```
+
 Context controls:
 
 - `stack`: framework/package metadata
@@ -189,7 +204,6 @@ npm run bench:context
 
 - Target-specific profiles for Codex, Claude, Cursor, and Copilot
 - Context preview before optimization
-- Optional clipboard and hotkey helpers
 - Project fixtures for framework-specific context detection
 
 ## License

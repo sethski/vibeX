@@ -9,7 +9,14 @@ import { isTargetProfile } from "./core/profiles.js";
 import { grabContext } from "./core/context-grabber.js";
 import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
 import { createIdeBridgePayload } from "./plugins/ide-light.js";
-import { buildShellInstallSnippet, defaultShellKind, formatTerminalPreview, isShellKind, type ShellKind } from "./plugins/terminal.js";
+import {
+  buildShellHotkeySnippet,
+  buildShellInstallSnippet,
+  defaultShellKind,
+  formatTerminalPreview,
+  isShellKind,
+  type ShellKind
+} from "./plugins/terminal.js";
 import type { CompressionOptions, ContextKey, ProjectContext, TargetProfile } from "./types.js";
 
 const args = process.argv.slice(2);
@@ -94,7 +101,7 @@ async function main(): Promise<void> {
     const exclude = consumeContextKeys("--exclude");
     const contextFile = consumeOption("--context-file");
     const contextJson = consumeOption("--context-json");
-    const prompt = stripOuterQuotes(args.join(" ").trim());
+    const prompt = stripOuterQuotes(await resolvePromptArg(args));
     const context = await loadCliContext(contextFile, contextJson);
     const optimized = await optimizePrompt(prompt, context, { target, include, exclude });
     if (copy) {
@@ -109,6 +116,22 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args[0] === "hotkey") {
+    args.shift();
+    const subcommand = args.shift() ?? "install";
+    if (subcommand !== "install") {
+      throw new Error(`Unsupported hotkey command: ${subcommand}`);
+    }
+    const shellValue = consumeShell();
+    const snippet = buildShellHotkeySnippet(shellValue);
+    if (json) {
+      console.log(JSON.stringify({ shell: shellValue, snippet }, null, 2));
+    } else {
+      console.log(snippet);
+    }
+    return;
+  }
+
   if (args[0] === "ide" && args[1] === "replace") {
     args.shift();
     args.shift();
@@ -117,7 +140,7 @@ async function main(): Promise<void> {
     const exclude = consumeContextKeys("--exclude");
     const contextFile = consumeOption("--context-file");
     const contextJson = consumeOption("--context-json");
-    const prompt = stripOuterQuotes(args.join(" ").trim());
+    const prompt = stripOuterQuotes(await resolvePromptArg(args));
     const context = await loadCliContext(contextFile, contextJson);
     const optimized = await optimizePrompt(prompt, context, { target, include, exclude });
     const payload = createIdeBridgePayload(optimized);
@@ -149,7 +172,7 @@ async function main(): Promise<void> {
   const exclude = consumeContextKeys("--exclude");
   const contextFile = consumeOption("--context-file");
   const contextJson = consumeOption("--context-json");
-  const prompt = stripOuterQuotes(args.join(" ").trim());
+  const prompt = stripOuterQuotes(await resolvePromptArg(args));
   const context = await loadCliContext(contextFile, contextJson);
   const options: CompressionOptions = { target, include, exclude, explain };
   const optimized = previewMode
@@ -247,6 +270,17 @@ function stripOuterQuotes(value: string): string {
   return value;
 }
 
+async function resolvePromptArg(parts: string[]): Promise<string> {
+  const joined = parts.join(" ").trim();
+  if (joined) {
+    return joined;
+  }
+  if (process.stdin.isTTY) {
+    return "";
+  }
+  return (await readStdin()).trim();
+}
+
 async function loadCliContext(contextFile: string | undefined, contextJson: string | undefined): Promise<Partial<ProjectContext>> {
   if (contextFile) {
     return JSON.parse(await readFile(contextFile, "utf8")) as Partial<ProjectContext>;
@@ -316,6 +350,18 @@ function copyToClipboard(value: string): Promise<void> {
       }
       reject(new Error(`Clipboard command failed: ${command}`));
     });
+  });
+}
+
+function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => {
+      data += chunk;
+    });
+    process.stdin.on("end", () => resolve(data));
+    process.stdin.on("error", reject);
   });
 }
 

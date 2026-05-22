@@ -59,3 +59,49 @@ export function buildShellInstallSnippet(shell: ShellKind): string {
     "}"
   ].join("\n");
 }
+
+export function buildShellHotkeySnippet(shell: ShellKind): string {
+  if (shell === "fish") {
+    return [
+      "function __vibex_hotkey",
+      "  set -l line (commandline)",
+      "  set -l optimized (printf '%s' \"$line\" | vibex)",
+      "  commandline -r -- $optimized",
+      "  commandline -f repaint",
+      "end",
+      "bind \\cg __vibex_hotkey"
+    ].join("\n");
+  }
+
+  if (shell === "powershell") {
+    return [
+      "Set-PSReadLineKeyHandler -Chord Ctrl+g -BriefDescription vibeXOptimize -ScriptBlock {",
+      "  $line = $null",
+      "  $cursor = 0",
+      "  [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)",
+      "  $optimized = $line | vibex",
+      "  [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $line.Length, $optimized)",
+      "}"
+    ].join("\n");
+  }
+
+  if (shell === "zsh") {
+    return [
+      "_vibex_hotkey() {",
+      "  BUFFER=\"$(printf '%s' \"$BUFFER\" | vibex)\"",
+      "  CURSOR=${#BUFFER}",
+      "  zle redisplay",
+      "}",
+      "zle -N vibex-hotkey _vibex_hotkey",
+      "bindkey '^G' vibex-hotkey"
+    ].join("\n");
+  }
+
+  return [
+    "__vibex_hotkey() {",
+    "  READLINE_LINE=\"$(printf '%s' \"$READLINE_LINE\" | vibex)\"",
+    "  READLINE_POINT=${#READLINE_LINE}",
+    "}",
+    "bind -x '\"\\C-g\":__vibex_hotkey'"
+  ].join("\n");
+}
