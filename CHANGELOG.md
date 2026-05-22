@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0
+
+- Add browser extension bridge command set:
+  - `vibex browser install`
+  - `vibex browser bridge`
+- Add browser payload plugin with stable `replace-prompt` message contract.
+- Add `POST /bridge/browser` API endpoint for browser extension integrations.
+- Add CLI and API tests for browser bridge flows.
+
 ## 1.1.0
 
 - Expand framework fixture coverage with Angular, SvelteKit, and Nuxt projects.

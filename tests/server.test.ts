@@ -110,3 +110,23 @@ test("bridge terminal endpoint returns terminal preview payload", async () => {
   assert.match(body.preview, /\[vibeX\] Optimize\? y\/N/);
   assert.match(body.optimized, /^Fix auth/);
 });
+
+test("bridge browser endpoint returns browser payload", async () => {
+  const server = createServer();
+  const response = await server.inject({
+    method: "POST",
+    url: "/bridge/browser",
+    body: JSON.stringify({
+      prompt: "fix auth",
+      context: { root: "/repo", stack: ["node"], activeFile: "src/auth.ts" },
+      options: { target: "cursor" }
+    })
+  });
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.version, 1);
+  assert.equal(body.action, "replace-prompt");
+  assert.equal(body.target, "cursor");
+  assert.match(body.text, /^Fix auth/);
+});

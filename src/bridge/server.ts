@@ -4,6 +4,7 @@ import { compressPrompt } from "../core/compressor.js";
 import { grabContext } from "../core/context-grabber.js";
 import { applyTargetProfile } from "../core/profiles.js";
 import { createPreview, filterContext } from "../core/preview.js";
+import { createBrowserBridgePayload } from "../plugins/browser.js";
 import { createIdeBridgePayload } from "../plugins/ide-light.js";
 import { formatTerminalPreview } from "../plugins/terminal.js";
 import type { CompressionOptions, ProjectContext } from "../types.js";
@@ -42,7 +43,13 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
 
   if (
     method === "POST"
-    && (url === "/optimize" || url === "/preview" || url === "/bridge/ide" || url === "/bridge/terminal")
+    && (
+      url === "/optimize"
+      || url === "/preview"
+      || url === "/bridge/ide"
+      || url === "/bridge/terminal"
+      || url === "/bridge/browser"
+    )
   ) {
     try {
       const payload = body ? JSON.parse(body) as { prompt?: unknown; context?: Partial<ProjectContext>; options?: CompressionOptions } : {};
@@ -74,6 +81,9 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
           ...terminal,
           optimized
         });
+      }
+      if (url === "/bridge/browser") {
+        return json(200, createBrowserBridgePayload(optimized, payload.options?.target ?? "codex"));
       }
 
       return json(200, {

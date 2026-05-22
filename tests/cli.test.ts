@@ -175,3 +175,31 @@ test("cli reads prompt from stdin when no positional prompt is provided", () => 
   const body = JSON.parse(result.stdout) as { optimized: string };
   assert.match(body.optimized, /^Fix auth from stdin/);
 });
+
+test("cli browser install returns snippet", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "browser", "install", "--json"]);
+  const body = JSON.parse(stdout) as { snippet: string };
+
+  assert.match(body.snippet, /window\.addEventListener\('message'/);
+  assert.match(body.snippet, /replace-prompt/);
+});
+
+test("cli browser bridge returns payload", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "browser",
+    "bridge",
+    "--json",
+    "--target",
+    "cursor",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts" }),
+    "fix auth"
+  ]);
+  const body = JSON.parse(stdout) as { version: number; action: string; target: string; text: string };
+
+  assert.equal(body.version, 1);
+  assert.equal(body.action, "replace-prompt");
+  assert.equal(body.target, "cursor");
+  assert.match(body.text, /^Fix auth/);
+});

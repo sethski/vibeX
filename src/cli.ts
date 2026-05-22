@@ -8,6 +8,7 @@ import { clearProjectMemory, loadProjectMemory, saveProjectMemory, scanProject }
 import { isTargetProfile } from "./core/profiles.js";
 import { grabContext } from "./core/context-grabber.js";
 import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
+import { browserInstallSnippet, createBrowserBridgePayload } from "./plugins/browser.js";
 import { createIdeBridgePayload } from "./plugins/ide-light.js";
 import {
   buildShellHotkeySnippet,
@@ -148,6 +149,38 @@ async function main(): Promise<void> {
       console.log(JSON.stringify(payload, null, 2));
     } else {
       console.log(payload.replacement.text);
+    }
+    return;
+  }
+
+  if (args[0] === "browser") {
+    args.shift();
+    const subcommand = args.shift() ?? "bridge";
+    if (subcommand === "install") {
+      const snippet = browserInstallSnippet();
+      if (json) {
+        console.log(JSON.stringify({ snippet }, null, 2));
+      } else {
+        console.log(snippet);
+      }
+      return;
+    }
+    if (subcommand !== "bridge") {
+      throw new Error(`Unsupported browser command: ${subcommand}`);
+    }
+    const target = consumeTarget();
+    const include = consumeContextKeys("--include");
+    const exclude = consumeContextKeys("--exclude");
+    const contextFile = consumeOption("--context-file");
+    const contextJson = consumeOption("--context-json");
+    const prompt = stripOuterQuotes(await resolvePromptArg(args));
+    const context = await loadCliContext(contextFile, contextJson);
+    const optimized = await optimizePrompt(prompt, context, { target, include, exclude });
+    const payload = createBrowserBridgePayload(optimized, target);
+    if (json) {
+      console.log(JSON.stringify(payload, null, 2));
+    } else {
+      console.log(payload.text);
     }
     return;
   }

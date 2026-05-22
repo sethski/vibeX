@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v1.1 MVP:
+v1.2 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -30,7 +30,9 @@ v1.1 MVP:
 - IDE bridge command (`ide replace`)
 - Hotkey helper command (`hotkey install`)
 - Stdin optimization flow for shell piping/hotkeys
+- Browser bridge commands (`browser install`, `browser bridge`)
 - Bridge API endpoints (`/bridge/ide`, `/bridge/terminal`)
+- Browser bridge API endpoint (`/bridge/browser`)
 - Localhost `/optimize` API
 - Localhost `/preview` API
 - Local-only processing with no telemetry and no external LLM calls
@@ -136,6 +138,13 @@ node dist/src/cli.js hotkey install --shell bash
 node dist/src/cli.js hotkey install --shell powershell
 ```
 
+Browser bridge:
+
+```bash
+node dist/src/cli.js browser install
+node dist/src/cli.js browser bridge --json "fix auth"
+```
+
 Stdin mode:
 
 ```bash
@@ -171,6 +180,10 @@ curl -X POST http://127.0.0.1:7742/bridge/ide \
 curl -X POST http://127.0.0.1:7742/bridge/terminal \
   -H "content-type: application/json" \
   -d "{\"prompt\":\"fix auth\",\"context\":{\"activeFile\":\"src/auth.ts\",\"stack\":[\"node\"]}}"
+
+curl -X POST http://127.0.0.1:7742/bridge/browser \
+  -H "content-type: application/json" \
+  -d "{\"prompt\":\"fix auth\",\"context\":{\"activeFile\":\"src/auth.ts\",\"stack\":[\"node\"]},\"options\":{\"target\":\"cursor\"}}"
 ```
 
 ## Project Memory
@@ -205,7 +218,6 @@ npm run bench:context
 
 - VS Code/Cursor extension wrapper
 - Native hotkey listeners
-- Browser extension bridge
 
 ## License
 
