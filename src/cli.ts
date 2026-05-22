@@ -3,9 +3,11 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { formatDoctorReport, runDoctor } from "./core/doctor.js";
 import { optimizePrompt } from "./core/formatter.js";
+import { createPreview } from "./core/preview.js";
 import { clearProjectMemory, loadProjectMemory, saveProjectMemory, scanProject } from "./core/memory.js";
 import { isTargetProfile } from "./core/profiles.js";
-import type { ProjectContext, TargetProfile } from "./types.js";
+import { grabContext } from "./core/context-grabber.js";
+import type { CompressionOptions, ContextKey, ProjectContext, TargetProfile } from "./types.js";
 
 const args = process.argv.slice(2);
 
@@ -29,6 +31,7 @@ async function main(): Promise<void> {
   }
 
   const json = consumeFlag("--json");
+  const explain = consumeFlag("--explain");
   if (args[0] === "doctor") {
     args.shift();
     const report = await runDoctor(process.cwd());
@@ -37,19 +40,36 @@ async function main(): Promise<void> {
     return;
   }
 
+  const previewMode = args[0] === "preview";
+  if (previewMode) {
+    args.shift();
+  }
+
   const copy = consumeFlag("--copy");
   const target = consumeTarget();
+  const include = consumeContextKeys("--include");
+  const exclude = consumeContextKeys("--exclude");
   const contextFile = consumeOption("--context-file");
+  const contextJson = consumeOption("--context-json");
   const prompt = stripOuterQuotes(args.join(" ").trim());
-  const context = contextFile ? JSON.parse(await readFile(contextFile, "utf8")) as Partial<ProjectContext> : {};
-  const optimized = await optimizePrompt(prompt, context, { target });
+  const context = await loadCliContext(contextFile, contextJson);
+  const options: CompressionOptions = { target, include, exclude, explain };
+  const optimized = previewMode
+    ? createPreview(prompt, await resolveContext(context), options).optimized
+    : await optimizePrompt(prompt, context, options);
+  const preview = previewMode ? createPreview(prompt, await resolveContext(context), options) : undefined;
 
   if (copy) {
     await copyToClipboard(optimized);
   }
 
   if (json) {
-    console.log(JSON.stringify({ optimized, copied: copy, target }, null, 2));
+    console.log(JSON.stringify(preview ? { ...preview, copied: copy, target } : { optimized, copied: copy, target }, null, 2));
+    return;
+  }
+
+  if (preview) {
+    console.log(formatPreview(preview.optimized, preview.context));
     return;
   }
 
@@ -75,6 +95,22 @@ function consumeOption(flag: string): string | undefined {
   return value;
 }
 
+function consumeContextKeys(flag: string): ContextKey[] | undefined {
+  const value = consumeOption(flag);
+  if (!value) {
+    return undefined;
+  }
+  const keys: ContextKey[] = [];
+  const rawKeys = value.split(",").map((key) => key.trim()).filter(Boolean);
+  for (const key of rawKeys) {
+    if (!isContextKey(key)) {
+      throw new Error(`Unsupported context key: ${key}`);
+    }
+    keys.push(key);
+  }
+  return keys;
+}
+
 function consumeTarget(): TargetProfile {
   const value = consumeOption("--target") ?? "codex";
   if (!isTargetProfile(value)) {
@@ -91,6 +127,41 @@ function stripOuterQuotes(value: string): string {
     return value.slice(1, -1);
   }
   return value;
+}
+
+async function loadCliContext(contextFile: string | undefined, contextJson: string | undefined): Promise<Partial<ProjectContext>> {
+  if (contextFile) {
+    return JSON.parse(await readFile(contextFile, "utf8")) as Partial<ProjectContext>;
+  }
+  if (contextJson) {
+    return JSON.parse(contextJson) as Partial<ProjectContext>;
+  }
+  return {};
+}
+
+async function resolveContext(context: Partial<ProjectContext>): Promise<ProjectContext> {
+  const base = await grabContext({ root: context.root });
+  return {
+    ...base,
+    ...context,
+    root: context.root ?? base.root,
+    stack: context.stack ?? base.stack,
+    gitSummary: context.gitSummary ?? base.gitSummary,
+    recentErrors: context.recentErrors ?? base.recentErrors,
+    importNeighbors: context.importNeighbors ?? base.importNeighbors
+  };
+}
+
+function formatPreview(optimized: string, context: Array<{ key: string; included: boolean; reason: string }>): string {
+  const lines = ["Optimized:", optimized, "", "Context:"];
+  for (const item of context) {
+    lines.push(`${item.included ? "IN" : "OUT"} ${item.key}${item.reason ? ` - ${item.reason}` : ""}`);
+  }
+  return lines.join("\n");
+}
+
+function isContextKey(value: string): value is ContextKey {
+  return value === "stack" || value === "file" || value === "diff" || value === "error" || value === "neighbors";
 }
 
 function copyToClipboard(value: string): Promise<void> {

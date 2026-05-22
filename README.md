@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.2 MVP:
+v0.3 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -14,7 +14,9 @@ v0.2 MVP:
 - Low-token target aliases for Codex, Claude, Cursor, and Copilot
 - `vibex doctor` environment checks
 - Optional clipboard output with `--copy`
+- Preview mode with include/exclude context controls
 - Localhost `/optimize` API
+- Localhost `/preview` API
 - Local-only processing with no telemetry and no external LLM calls
 
 ## Install
@@ -74,6 +76,25 @@ Doctor:
 node dist/src/cli.js doctor
 node dist/src/cli.js doctor --json
 ```
+
+Preview:
+
+```bash
+node dist/src/cli.js preview "fix auth"
+node dist/src/cli.js preview --json "fix auth"
+node dist/src/cli.js preview --include stack,file "fix auth"
+node dist/src/cli.js preview --exclude diff,error --explain "fix auth"
+```
+
+Context controls:
+
+- `stack`: framework/package metadata
+- `file`: active file and optional cursor line
+- `diff`: git diff summary
+- `error`: recent local error log, only for debug-like prompts
+- `neighbors`: nearby import/export files
+
+vibeX always uses internal token-efficient trimming. User-facing token budget flags are intentionally not exposed.
 
 ## Server
 

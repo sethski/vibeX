@@ -16,8 +16,13 @@ export interface ProjectContext {
   importNeighbors: string[];
 }
 
+export type ContextKey = "stack" | "file" | "diff" | "error" | "neighbors";
+
 export interface CompressionOptions {
   target?: TargetProfile;
+  include?: ContextKey[];
+  exclude?: ContextKey[];
+  explain?: boolean;
 }
 
 export interface CompressionResult {
@@ -28,6 +33,18 @@ export interface CompressionResult {
 
 export interface OptimizeOptions extends CompressionOptions {
   root?: string;
+}
+
+export interface PreviewContextItem {
+  key: ContextKey;
+  label: string;
+  included: boolean;
+  value?: string;
+  reason: string;
+}
+
+export interface PreviewResult extends CompressionResult {
+  context: PreviewContextItem[];
 }
 
 export type TargetProfile = "codex" | "claude" | "cursor" | "copilot";

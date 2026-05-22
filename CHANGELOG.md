@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Add `vibex preview` with JSON and text output.
+- Add include/exclude context controls for stack, file, diff, error, and neighbors.
+- Add explanation details for preview context decisions.
+- Add `POST /preview` API.
+- Add privacy coverage proving preview context details do not echo raw prompt secrets.
+
 ## 0.2.1
 
 - Remove public token budget control from TypeScript/API options.

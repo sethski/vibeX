@@ -18,3 +18,28 @@ test("cli doctor prints JSON report", async () => {
   assert.equal(Array.isArray(body.checks), true);
   assert.equal(body.checks.some((check) => check.name === "node"), true);
 });
+
+test("cli preview prints JSON context report", async () => {
+  const context = JSON.stringify({
+    root: "/repo",
+    stack: ["node"],
+    activeFile: "src/auth.ts",
+    gitSummary: "src/auth.ts | 2 +",
+    recentErrors: ["Error: bad"],
+    importNeighbors: []
+  });
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "preview",
+    "--json",
+    "--include",
+    "stack,file",
+    "--context-json",
+    context,
+    "fix auth"
+  ]);
+  const body = JSON.parse(stdout) as { optimized: string; context: Array<{ key: string; included: boolean }> };
+
+  assert.match(body.optimized, /Stack: node/);
+  assert.deepEqual(body.context.filter((item) => item.included).map((item) => item.key), ["stack", "file"]);
+});
