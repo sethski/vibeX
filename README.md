@@ -228,11 +228,17 @@ npm run typecheck
 npm run build
 npm run pack:dry
 npm run bench:context
+npm run bench:check
+npm run release:hardening
 ```
 
-## Roadmap
+## Stability Artifacts
 
-- Stable Core release hardening pack (contracts + migration notes + benchmark baselines)
+- [C:\Users\sethb\Desktop\vibex\CONTRACTS.md](C:/Users/sethb/Desktop/vibex/CONTRACTS.md) documents stable CLI/API contracts.
+- [C:\Users\sethb\Desktop\vibex\MIGRATIONS.md](C:/Users/sethb/Desktop/vibex/MIGRATIONS.md) tracks migration notes across releases.
+- [C:\Users\sethb\Desktop\vibex\benchmarks\context-baseline.json](C:/Users/sethb/Desktop/vibex/benchmarks/context-baseline.json) stores benchmark baselines used by `npm run bench:check`.
+
+## Roadmap
 - Team config and governance layer
 - Quality scoring and regression gates
 - Plugin/Hook SDK

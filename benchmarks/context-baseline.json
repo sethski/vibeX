@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-05-22",
+  "iterations": 20,
+  "scan": {
+    "avgMs": 5.29,
+    "minMs": 3.85,
+    "maxMs": 8.25
+  },
+  "context": {
+    "avgMs": 72.87,
+    "minMs": 58.72,
+    "maxMs": 93.04
+  }
+}

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.0
+
+- Add stable-core hardening artifacts:
+  - `CONTRACTS.md`
+  - `MIGRATIONS.md`
+  - `benchmarks/context-baseline.json`
+- Add benchmark regression checker:
+  - `npm run bench:check`
+- Add release hardening workflow command:
+  - `npm run release:hardening`
+- Add release-hardening tests that verify contract/migration docs and baseline artifact integrity.
+
 ## 1.6.0
 
 - Add prompt policy system with `strict`, `balanced`, and `minimal` modes.
