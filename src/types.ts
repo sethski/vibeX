@@ -44,6 +44,7 @@ export interface PreviewContextItem {
   key: ContextKey;
   label: string;
   included: boolean;
+  confidence: number;
   value?: string;
   reason: string;
 }

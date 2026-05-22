@@ -50,3 +50,24 @@ test("preview context order follows ranking", () => {
 
   assert.deepEqual(keys, ["stack", "file", "error", "neighbors", "diff"]);
 });
+
+test("preview emits confidence scores for each context item", () => {
+  const preview = createPreview("fix auth crash", context, { explain: true });
+
+  for (const item of preview.context) {
+    assert.equal(typeof item.confidence, "number");
+    assert.equal(item.confidence >= 0 && item.confidence <= 1, true);
+  }
+});
+
+test("low confidence context falls back to safe clarifying prompt", () => {
+  const preview = createPreview("fix it", {
+    root: "/repo",
+    stack: [],
+    gitSummary: "",
+    recentErrors: [],
+    importNeighbors: []
+  }, { explain: true });
+
+  assert.match(preview.optimized, /Clarify exact file\/component/);
+});

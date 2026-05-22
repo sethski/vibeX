@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0
+
+- Add context confidence scoring in preview/explain output.
+- Add low-confidence fallback prompt with clarifying question.
+- Add `vibex explain --json` as preview+explain command alias.
+- Route optimize behavior through confidence-aware preview logic for consistent fallback policy.
+
 ## 0.5.0
 
 - Add fixture-based context tests for Next.js, Vite React, and pnpm monorepo shapes.

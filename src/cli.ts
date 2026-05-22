@@ -14,7 +14,7 @@ const args = process.argv.slice(2);
 
 async function main(): Promise<void> {
   const json = consumeFlag("--json");
-  const explain = consumeFlag("--explain");
+  let explain = consumeFlag("--explain");
 
   if (args[0] === "scan") {
     args.shift();
@@ -73,9 +73,13 @@ async function main(): Promise<void> {
     args.shift();
   }
 
-  const previewMode = args[0] === "preview";
+  const explainMode = args[0] === "explain";
+  const previewMode = args[0] === "preview" || explainMode;
   if (previewMode) {
     args.shift();
+  }
+  if (explainMode) {
+    explain = true;
   }
 
   const copy = consumeFlag("--copy");

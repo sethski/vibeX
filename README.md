@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.5 MVP:
+v0.6 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -17,6 +17,9 @@ v0.5 MVP:
 - Preview mode with include/exclude context controls
 - Context engine: package manager, framework, source/test roots, tsconfig aliases, import neighbors
 - `vibex compare --json` for raw vs optimized token estimates
+- Confidence scores per context item in preview output
+- `vibex explain --json` for decision traces
+- Low-confidence fallback prompt policy
 - Localhost `/optimize` API
 - Localhost `/preview` API
 - Local-only processing with no telemetry and no external LLM calls

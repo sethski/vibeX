@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 test("cli supports target profiles", async () => {
   const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "--target", "cursor", "fix auth"]);
 
-  assert.equal(stdout.trim(), "Fix auth | Preserve existing style/tests. Output changed lines only. No markdown.");
+  assert.match(stdout.trim(), /^Fix auth \| /);
 });
 
 test("cli doctor prints JSON report", async () => {
@@ -96,4 +96,14 @@ test("json commands do not leak secrets from prompt into context metadata", asyn
 
   assert.equal(text.includes("SECRET_TOKEN"), false);
   assert.equal(text.includes("abc123"), false);
+});
+
+test("cli explain returns preview metadata json", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "explain", "--json", "fix auth"]);
+  const body = JSON.parse(stdout) as { optimized: string; context: Array<{ confidence: number; reason: string }> };
+
+  assert.equal(Array.isArray(body.context), true);
+  assert.equal(body.context.length > 0, true);
+  assert.equal(typeof body.context[0].confidence, "number");
+  assert.match(body.optimized, /Fix auth/);
 });

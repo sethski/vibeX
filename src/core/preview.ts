@@ -1,13 +1,16 @@
 import type { CompressionOptions, ContextKey, PreviewContextItem, PreviewResult, ProjectContext } from "../types.js";
 import { compressPrompt } from "./compressor.js";
+import { compactPrompt } from "./tokens.js";
 
 export function createPreview(raw: string, context: ProjectContext, options: CompressionOptions = {}): PreviewResult {
   const filtered = filterContext(context, options);
   const compressed = compressPrompt(raw, filtered, options);
   const contextItems = describeContext(context, compressed.contextUsed, options);
+  const optimized = shouldFallback(contextItems) ? `${compactPrompt(raw)} | Clarify exact file/component before editing.` : compressed.optimized;
 
   return {
     ...compressed,
+    optimized,
     context: contextItems
   };
 }
@@ -55,10 +58,12 @@ function item(
 ): PreviewContextItem {
   const allowed = allows(key, options);
   const included = allowed && used;
+  const confidence = confidenceFor(key, value);
   return {
     key,
     label,
     included,
+    confidence,
     value: options.explain && included ? value : undefined,
     reason: options.explain ? (allowed ? reason : "Excluded by user filter.") : ""
   };
@@ -72,4 +77,31 @@ function allows(key: ContextKey, options: CompressionOptions): boolean {
     return false;
   }
   return true;
+}
+
+function shouldFallback(items: PreviewContextItem[]): boolean {
+  return items.every((item) => item.confidence < 0.35);
+}
+
+function confidenceFor(key: ContextKey, value: string): number {
+  const hasValue = value.trim().length > 0;
+  if (!hasValue) {
+    return 0;
+  }
+  if (key === "file") {
+    return 0.95;
+  }
+  if (key === "stack") {
+    return 0.9;
+  }
+  if (key === "error") {
+    return value.includes(":") ? 0.8 : 0.65;
+  }
+  if (key === "neighbors") {
+    return value.split(/\s+/).filter(Boolean).length >= 2 ? 0.7 : 0.55;
+  }
+  if (key === "diff") {
+    return /\d/.test(value) ? 0.6 : 0.45;
+  }
+  return 0.5;
 }
