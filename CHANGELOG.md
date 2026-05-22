@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.0
+
+- Add persistent hotkey profiles in `.vibex/hotkey.json`.
+- Add `vibex hotkey profile` subcommands:
+  - `show`
+  - `set` (target/include/exclude/context)
+  - `clear`
+- Wire `vibex hotkey listen` to load profile defaults with CLI override support.
+- Add unit and CLI coverage for hotkey profile lifecycle.
+
 ## 1.4.0
 
 - Add native terminal hotkey listener mode:

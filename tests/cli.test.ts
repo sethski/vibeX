@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile, spawnSync } from "node:child_process";
 import { promisify } from "node:util";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
@@ -227,4 +230,37 @@ test("cli browser bridge returns payload", async () => {
   assert.equal(body.action, "replace-prompt");
   assert.equal(body.target, "cursor");
   assert.match(body.text, /^Fix auth/);
+});
+
+test("cli hotkey profile set/show/clear", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "vibex-hotkey-cli-"));
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ name: "tmp", private: true }));
+  const cliPath = join(process.cwd(), "dist", "src", "cli.js");
+
+  const setResult = await execFileAsync(process.execPath, [
+    cliPath,
+    "hotkey",
+    "profile",
+    "set",
+    "--json",
+    "--target",
+    "cursor",
+    "--include",
+    "stack,file",
+    "--context-json",
+    JSON.stringify({ activeFile: "src/auth.ts" })
+  ], { cwd });
+  const setBody = JSON.parse(setResult.stdout) as { target: string; include: string[]; context: { activeFile: string } };
+  assert.equal(setBody.target, "cursor");
+  assert.deepEqual(setBody.include, ["stack", "file"]);
+  assert.equal(setBody.context.activeFile, "src/auth.ts");
+
+  const showResult = await execFileAsync(process.execPath, [cliPath, "hotkey", "profile", "show"], { cwd });
+  const showBody = JSON.parse(showResult.stdout) as { target: string };
+  assert.equal(showBody.target, "cursor");
+
+  const clearResult = await execFileAsync(process.execPath, [cliPath, "hotkey", "profile", "clear", "--json"], { cwd });
+  assert.equal(JSON.parse(clearResult.stdout).cleared, true);
+
+  await rm(cwd, { recursive: true, force: true });
 });

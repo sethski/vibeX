@@ -10,6 +10,7 @@ import { grabContext } from "./core/context-grabber.js";
 import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
 import { browserInstallSnippet, createBrowserBridgePayload } from "./plugins/browser.js";
 import { runHotkeyListener } from "./plugins/hotkey-listener.js";
+import { clearHotkeyProfile, loadHotkeyProfile, saveHotkeyProfile } from "./plugins/hotkey-profile.js";
 import { buildIdeInstallSnippet, createIdeBridgePayload, isEditorKind } from "./plugins/ide-light.js";
 import {
   buildShellHotkeySnippet,
@@ -121,13 +122,56 @@ async function main(): Promise<void> {
   if (args[0] === "hotkey") {
     args.shift();
     const subcommand = args.shift() ?? "install";
+    if (subcommand === "profile") {
+      const action = args.shift() ?? "show";
+      if (action === "clear") {
+        await clearHotkeyProfile(process.cwd());
+        if (json) {
+          console.log(JSON.stringify({ cleared: true }, null, 2));
+        } else {
+          console.log("Cleared .vibex/hotkey.json");
+        }
+        return;
+      }
+      if (action === "set") {
+        const current = await loadHotkeyProfile(process.cwd());
+        const target = consumeOptionalTarget() ?? current?.target ?? "codex";
+        const include = consumeContextKeys("--include") ?? current?.include;
+        const exclude = consumeContextKeys("--exclude") ?? current?.exclude;
+        const contextFile = consumeOption("--context-file");
+        const contextJson = consumeOption("--context-json");
+        const profileContext = await loadCliContext(contextFile, contextJson);
+        const profile = {
+          version: 1 as const,
+          target,
+          include,
+          exclude,
+          context: {
+            ...(current?.context ?? {}),
+            ...profileContext
+          }
+        };
+        await saveHotkeyProfile(process.cwd(), profile);
+        console.log(json ? JSON.stringify(profile, null, 2) : "Saved .vibex/hotkey.json");
+        return;
+      }
+      if (action !== "show") {
+        throw new Error(`Unsupported hotkey profile command: ${action}`);
+      }
+      console.log(JSON.stringify(await loadHotkeyProfile(process.cwd()), null, 2));
+      return;
+    }
     if (subcommand === "listen") {
-      const target = consumeTarget();
-      const include = consumeContextKeys("--include");
-      const exclude = consumeContextKeys("--exclude");
+      const profile = await loadHotkeyProfile(process.cwd());
+      const target = consumeOptionalTarget() ?? profile?.target ?? "codex";
+      const include = consumeContextKeys("--include") ?? profile?.include;
+      const exclude = consumeContextKeys("--exclude") ?? profile?.exclude;
       const contextFile = consumeOption("--context-file");
       const contextJson = consumeOption("--context-json");
-      const context = await loadCliContext(contextFile, contextJson);
+      const context = {
+        ...(profile?.context ?? {}),
+        ...(await loadCliContext(contextFile, contextJson))
+      };
       await runHotkeyListener({
         target,
         context,
@@ -314,6 +358,17 @@ function consumeContextKeys(flag: string): ContextKey[] | undefined {
 
 function consumeTarget(): TargetProfile {
   const value = consumeOption("--target") ?? "codex";
+  if (!isTargetProfile(value)) {
+    throw new Error(`Unsupported target: ${value}`);
+  }
+  return value;
+}
+
+function consumeOptionalTarget(): TargetProfile | undefined {
+  const value = consumeOption("--target");
+  if (!value) {
+    return undefined;
+  }
   if (!isTargetProfile(value)) {
     throw new Error(`Unsupported target: ${value}`);
   }

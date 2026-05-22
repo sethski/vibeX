@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v1.4 MVP:
+v1.5 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -30,6 +30,7 @@ v1.4 MVP:
 - IDE bridge commands (`ide replace`, `ide install`)
 - Hotkey helper command (`hotkey install`)
 - Native hotkey listener command (`hotkey listen`)
+- Hotkey profile commands (`hotkey profile show|set|clear`)
 - Stdin optimization flow for shell piping/hotkeys
 - Browser bridge commands (`browser install`, `browser bridge`)
 - Bridge API endpoints (`/bridge/ide`, `/bridge/terminal`)
@@ -140,6 +141,8 @@ Hotkey helper:
 node dist/src/cli.js hotkey install --shell bash
 node dist/src/cli.js hotkey install --shell powershell
 node dist/src/cli.js hotkey listen --target codex
+node dist/src/cli.js hotkey profile set --target cursor --include stack,file
+node dist/src/cli.js hotkey profile show
 ```
 
 Browser bridge:
@@ -220,7 +223,7 @@ npm run bench:context
 
 ## Roadmap
 
-- Hotkey profile persistence
+- Desktop-native global listener process
 
 ## License
 
