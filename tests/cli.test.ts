@@ -107,3 +107,46 @@ test("cli explain returns preview metadata json", async () => {
   assert.equal(typeof body.context[0].confidence, "number");
   assert.match(body.optimized, /Fix auth/);
 });
+
+test("cli terminal install returns shell snippet", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "terminal", "install", "--json", "--shell", "bash"]);
+  const body = JSON.parse(stdout) as { shell: string; snippet: string };
+
+  assert.equal(body.shell, "bash");
+  assert.match(body.snippet, /vx\(\)/);
+  assert.match(body.snippet, /vibex --copy/);
+});
+
+test("cli terminal preview returns bridge payload", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "terminal",
+    "preview",
+    "--json",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts" }),
+    "fix auth"
+  ]);
+  const body = JSON.parse(stdout) as { shouldOffer: boolean; preview: string; optimized: string };
+
+  assert.equal(body.shouldOffer, true);
+  assert.match(body.preview, /\[vibeX\] Optimize\? y\/N/);
+  assert.match(body.optimized, /^Fix auth/);
+});
+
+test("cli ide replace returns bridge payload", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "ide",
+    "replace",
+    "--json",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts" }),
+    "fix auth"
+  ]);
+  const body = JSON.parse(stdout) as { version: number; replacement: { range: string; text: string } };
+
+  assert.equal(body.version, 1);
+  assert.equal(body.replacement.range, "active-input");
+  assert.match(body.replacement.text, /^Fix auth/);
+});

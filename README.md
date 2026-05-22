@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.8 MVP:
+v0.9 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -25,6 +25,9 @@ v0.8 MVP:
 - Workspace topology detection (`pnpm-workspace.yaml`, `package.json#workspaces`)
 - Active-file package-root targeting for monorepos
 - Per-package project-memory cache files under `.vibex/`
+- Terminal bridge commands (`terminal install`, `terminal preview`)
+- IDE bridge command (`ide replace`)
+- Bridge API endpoints (`/bridge/ide`, `/bridge/terminal`)
 - Localhost `/optimize` API
 - Localhost `/preview` API
 - Local-only processing with no telemetry and no external LLM calls
@@ -110,6 +113,19 @@ node dist/src/cli.js preview --include stack,file "fix auth"
 node dist/src/cli.js preview --exclude diff,error --explain "fix auth"
 ```
 
+Terminal bridge:
+
+```bash
+node dist/src/cli.js terminal install --shell bash
+node dist/src/cli.js terminal preview --json "fix auth"
+```
+
+IDE bridge:
+
+```bash
+node dist/src/cli.js ide replace --json "fix auth"
+```
+
 Context controls:
 
 - `stack`: framework/package metadata
@@ -129,6 +145,14 @@ node dist/src/bridge/server.js
 
 ```bash
 curl -X POST http://127.0.0.1:7742/optimize \
+  -H "content-type: application/json" \
+  -d "{\"prompt\":\"fix auth\",\"context\":{\"activeFile\":\"src/auth.ts\",\"stack\":[\"node\"]}}"
+
+curl -X POST http://127.0.0.1:7742/bridge/ide \
+  -H "content-type: application/json" \
+  -d "{\"prompt\":\"fix auth\",\"context\":{\"activeFile\":\"src/auth.ts\",\"stack\":[\"node\"]}}"
+
+curl -X POST http://127.0.0.1:7742/bridge/terminal \
   -H "content-type: application/json" \
   -d "{\"prompt\":\"fix auth\",\"context\":{\"activeFile\":\"src/auth.ts\",\"stack\":[\"node\"]}}"
 ```
@@ -165,8 +189,6 @@ npm run bench:context
 
 - Target-specific profiles for Codex, Claude, Cursor, and Copilot
 - Context preview before optimization
-- VS Code/Cursor extension wrapper
-- Terminal shell integration
 - Optional clipboard and hotkey helpers
 - Project fixtures for framework-specific context detection
 

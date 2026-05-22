@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0
+
+- Add `vibex terminal install` to print shell wrapper snippets (`bash`, `zsh`, `fish`, `powershell`).
+- Add `vibex terminal preview` to return terminal-ready optimize previews.
+- Add `vibex ide replace` to emit active-input replacement payloads.
+- Add `POST /bridge/ide` and `POST /bridge/terminal` API endpoints.
+- Add CLI and server coverage for all new bridge flows.
+
 ## 0.8.0
 
 - Add workspace topology detection from `pnpm-workspace.yaml` and `package.json#workspaces`.

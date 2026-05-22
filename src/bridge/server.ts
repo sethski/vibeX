@@ -4,6 +4,8 @@ import { compressPrompt } from "../core/compressor.js";
 import { grabContext } from "../core/context-grabber.js";
 import { applyTargetProfile } from "../core/profiles.js";
 import { createPreview, filterContext } from "../core/preview.js";
+import { createIdeBridgePayload } from "../plugins/ide-light.js";
+import { formatTerminalPreview } from "../plugins/terminal.js";
 import type { CompressionOptions, ProjectContext } from "../types.js";
 
 interface InjectRequest {
@@ -38,7 +40,10 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
     return json(200, { status: "ok", service: "vibex" });
   }
 
-  if (method === "POST" && (url === "/optimize" || url === "/preview")) {
+  if (
+    method === "POST"
+    && (url === "/optimize" || url === "/preview" || url === "/bridge/ide" || url === "/bridge/terminal")
+  ) {
     try {
       const payload = body ? JSON.parse(body) as { prompt?: unknown; context?: Partial<ProjectContext>; options?: CompressionOptions } : {};
       if (typeof payload.prompt !== "string" || !payload.prompt.trim()) {
@@ -59,6 +64,17 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
       const preview = createPreview(payload.prompt, context, payload.options);
       const compressed = url === "/preview" ? preview : compressPrompt(payload.prompt, filterContext(context, payload.options), payload.options);
       const optimized = applyTargetProfile(compressed.optimized, payload.options?.target);
+
+      if (url === "/bridge/ide") {
+        return json(200, createIdeBridgePayload(optimized));
+      }
+      if (url === "/bridge/terminal") {
+        const terminal = formatTerminalPreview(optimized);
+        return json(200, {
+          ...terminal,
+          optimized
+        });
+      }
 
       return json(200, {
         optimized,

@@ -8,6 +8,8 @@ import { clearProjectMemory, loadProjectMemory, saveProjectMemory, scanProject }
 import { isTargetProfile } from "./core/profiles.js";
 import { grabContext } from "./core/context-grabber.js";
 import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
+import { createIdeBridgePayload } from "./plugins/ide-light.js";
+import { buildShellInstallSnippet, defaultShellKind, formatTerminalPreview, isShellKind, type ShellKind } from "./plugins/terminal.js";
 import type { CompressionOptions, ContextKey, ProjectContext, TargetProfile } from "./types.js";
 
 const args = process.argv.slice(2);
@@ -65,6 +67,65 @@ async function main(): Promise<void> {
     const report = await runDoctor(process.cwd());
     console.log(json ? JSON.stringify(report, null, 2) : formatDoctorReport(report));
     process.exitCode = report.ok ? 0 : 1;
+    return;
+  }
+
+  if (args[0] === "terminal") {
+    args.shift();
+    const subcommand = args.shift() ?? "preview";
+    if (subcommand === "install") {
+      const shellValue = consumeShell();
+      const snippet = buildShellInstallSnippet(shellValue);
+      if (json) {
+        console.log(JSON.stringify({ shell: shellValue, snippet }, null, 2));
+      } else {
+        console.log(snippet);
+      }
+      return;
+    }
+
+    if (subcommand !== "preview") {
+      throw new Error(`Unsupported terminal command: ${subcommand}`);
+    }
+
+    const copy = consumeFlag("--copy");
+    const target = consumeTarget();
+    const include = consumeContextKeys("--include");
+    const exclude = consumeContextKeys("--exclude");
+    const contextFile = consumeOption("--context-file");
+    const contextJson = consumeOption("--context-json");
+    const prompt = stripOuterQuotes(args.join(" ").trim());
+    const context = await loadCliContext(contextFile, contextJson);
+    const optimized = await optimizePrompt(prompt, context, { target, include, exclude });
+    if (copy) {
+      await copyToClipboard(optimized);
+    }
+    const preview = formatTerminalPreview(optimized);
+    if (json) {
+      console.log(JSON.stringify({ ...preview, optimized, copied: copy, target }, null, 2));
+    } else {
+      console.log(preview.preview);
+    }
+    return;
+  }
+
+  if (args[0] === "ide" && args[1] === "replace") {
+    args.shift();
+    args.shift();
+    const target = consumeTarget();
+    const include = consumeContextKeys("--include");
+    const exclude = consumeContextKeys("--exclude");
+    const contextFile = consumeOption("--context-file");
+    const contextJson = consumeOption("--context-json");
+    const prompt = stripOuterQuotes(args.join(" ").trim());
+    const context = await loadCliContext(contextFile, contextJson);
+    const optimized = await optimizePrompt(prompt, context, { target, include, exclude });
+    const payload = createIdeBridgePayload(optimized);
+    if (json) {
+      console.log(JSON.stringify(payload, null, 2));
+    } else {
+      console.log(payload.replacement.text);
+    }
     return;
   }
 
@@ -166,6 +227,14 @@ function consumeTarget(): TargetProfile {
     throw new Error(`Unsupported target: ${value}`);
   }
   return value;
+}
+
+function consumeShell(): ShellKind {
+  const shellValue = consumeOption("--shell") ?? defaultShellKind();
+  if (!isShellKind(shellValue)) {
+    throw new Error(`Unsupported shell: ${shellValue}`);
+  }
+  return shellValue;
 }
 
 function stripOuterQuotes(value: string): string {

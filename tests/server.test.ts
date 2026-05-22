@@ -74,3 +74,39 @@ test("preview endpoint returns context details", async () => {
   assert.equal(Array.isArray(body.context), true);
   assert.equal(body.context.some((item: { key: string; included: boolean }) => item.key === "file" && item.included), true);
 });
+
+test("bridge ide endpoint returns replacement payload", async () => {
+  const server = createServer();
+  const response = await server.inject({
+    method: "POST",
+    url: "/bridge/ide",
+    body: JSON.stringify({
+      prompt: "fix auth",
+      context: { root: "/repo", stack: ["node"], activeFile: "src/auth.ts" }
+    })
+  });
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.version, 1);
+  assert.equal(body.replacement.range, "active-input");
+  assert.match(body.replacement.text, /^Fix auth/);
+});
+
+test("bridge terminal endpoint returns terminal preview payload", async () => {
+  const server = createServer();
+  const response = await server.inject({
+    method: "POST",
+    url: "/bridge/terminal",
+    body: JSON.stringify({
+      prompt: "fix auth",
+      context: { root: "/repo", stack: ["node"], activeFile: "src/auth.ts" }
+    })
+  });
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.shouldOffer, true);
+  assert.match(body.preview, /\[vibeX\] Optimize\? y\/N/);
+  assert.match(body.optimized, /^Fix auth/);
+});
