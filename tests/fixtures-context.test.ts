@@ -31,6 +31,7 @@ test("fixture: pnpm monorepo scan", async () => {
 
   assert.equal(memory.packageManager, "pnpm");
   assert.equal(memory.framework, "typescript");
+  assert.equal(memory.workspaceRoots.includes("packages/app"), true);
 });
 
 test("fixture: context import neighbors from active file", async () => {
@@ -38,4 +39,12 @@ test("fixture: context import neighbors from active file", async () => {
   const context = await grabContext({ root, activeFile: "src/auth/index.ts" });
 
   assert.deepEqual(context.importNeighbors.sort(), ["src/auth/session.ts", "src/lib/guards.ts"]);
+});
+
+test("fixture: context detects package root in monorepo", async () => {
+  const root = join(FIXTURES, "pnpm-monorepo-basic");
+  const context = await grabContext({ root, activeFile: "packages/app/package.json" });
+
+  assert.equal(context.packageRoot, "packages/app");
+  assert.equal(context.workspaceRoots?.includes("packages/app"), true);
 });

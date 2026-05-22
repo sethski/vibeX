@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- Add workspace topology detection from `pnpm-workspace.yaml` and `package.json#workspaces`.
+- Add monorepo package-root targeting based on `--active-file` context.
+- Add per-package cache storage under `.vibex/` while preserving root-cache compatibility.
+- Add fixture and unit coverage for workspace roots and package-root context selection.
+
 ## 0.7.0
 
 - Add compact diff-stat summarization prioritizing highest-signal changed files.

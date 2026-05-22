@@ -64,6 +64,22 @@ test("detects package manager from lockfile and tsconfig aliases", async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+test("detects workspace roots in pnpm monorepo fixture", async () => {
+  const root = join(process.cwd(), "tests", "fixtures", "pnpm-monorepo-basic");
+  const memory = await scanProject(root);
+
+  assert.equal(memory.workspaceRoots.includes("packages/app"), true);
+  assert.equal(memory.packageRoot, ".");
+});
+
+test("scans package-specific memory in monorepo", async () => {
+  const root = join(process.cwd(), "tests", "fixtures", "pnpm-monorepo-basic");
+  const memory = await scanProject(root, "packages/app");
+
+  assert.equal(memory.packageRoot, "packages/app");
+  assert.equal(memory.frameworkFiles.includes("package.json"), true);
+});
+
 test("stores only derived metadata in cache", async () => {
   const root = await mkdtemp(join(tmpdir(), "vibex-cache-"));
   const memory = await scanProject(root);

@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v0.7 MVP:
+v0.8 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -22,6 +22,9 @@ v0.7 MVP:
 - Low-confidence fallback prompt policy
 - Diff intelligence with compact high-signal summaries
 - Error intelligence with fingerprint dedupe
+- Workspace topology detection (`pnpm-workspace.yaml`, `package.json#workspaces`)
+- Active-file package-root targeting for monorepos
+- Per-package project-memory cache files under `.vibex/`
 - Localhost `/optimize` API
 - Localhost `/preview` API
 - Local-only processing with no telemetry and no external LLM calls
@@ -145,6 +148,8 @@ curl -X POST http://127.0.0.1:7742/optimize \
 - framework marker files
 
 It does not store raw prompts, chat text, clipboard text, terminal history, secrets, or source file contents. `.vibex/` is gitignored by default.
+
+For monorepos, vibeX detects workspace packages and can read/write per-package cache entries automatically when context includes an `--active-file` in a workspace package.
 
 ## Development
 

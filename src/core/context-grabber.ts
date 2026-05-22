@@ -11,11 +11,22 @@ const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 
 export async function grabContext(options: ContextGrabberOptions = {}): Promise<ProjectContext> {
   const root = options.root ?? process.cwd();
-  const memory = (await loadProjectMemory(root)) ?? (await scanProject(root));
-  const importNeighbors = await findImportNeighbors(root, options.activeFile, memory.aliases);
+  const rootMemory = (await loadProjectMemory(root, ".")) ?? (await scanProject(root, "."));
+  const packageRoot = detectActivePackageRoot(options.activeFile, rootMemory.workspaceRoots);
+  const memory = packageRoot === "."
+    ? rootMemory
+    : ((await loadProjectMemory(root, packageRoot)) ?? (await scanProject(root, packageRoot)));
+  const importNeighbors = await findImportNeighbors(
+    root,
+    options.activeFile,
+    memory.aliases,
+    memory.packageRoot
+  );
 
   return {
     root,
+    packageRoot: memory.packageRoot,
+    workspaceRoots: rootMemory.workspaceRoots,
     stack: memory.stack,
     packageManager: memory.packageManager,
     framework: memory.framework,
@@ -89,12 +100,14 @@ export function dedupeAndRankErrors(lines: string[]): string[] {
 async function findImportNeighbors(
   root: string,
   activeFile: string | undefined,
-  aliases: Record<string, string[]>
+  aliases: Record<string, string[]>,
+  packageRoot: string
 ): Promise<string[]> {
   if (!activeFile) {
     return [];
   }
 
+  const packagePath = packageRoot === "." ? root : join(root, packageRoot);
   const activePath = join(root, activeFile);
   let content: string;
   try {
@@ -110,7 +123,7 @@ async function findImportNeighbors(
     if (!importPath) {
       continue;
     }
-    const resolved = await resolveImport(root, activePath, importPath, aliases);
+    const resolved = await resolveImport(packagePath, activePath, importPath, aliases);
     if (resolved) {
       found.add(toProjectPath(root, resolved));
     }
@@ -172,4 +185,20 @@ function fingerprintError(line: string): string {
     .replace(/[A-Za-z]:\\[^ ]+/g, "<path>")
     .replace(/\/[^ ]+/g, "<path>")
     .toLowerCase();
+}
+
+function detectActivePackageRoot(activeFile: string | undefined, workspaceRoots: string[]): string {
+  if (!activeFile || workspaceRoots.length === 0) {
+    return ".";
+  }
+
+  const normalizedFile = activeFile.replace(/\\/g, "/");
+  const ordered = [...workspaceRoots].sort((a, b) => b.length - a.length);
+  for (const workspaceRoot of ordered) {
+    if (normalizedFile === workspaceRoot || normalizedFile.startsWith(`${workspaceRoot}/`)) {
+      return workspaceRoot;
+    }
+  }
+
+  return ".";
 }

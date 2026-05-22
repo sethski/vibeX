@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ProjectMemory } from "../types.js";
 
@@ -16,11 +16,20 @@ const KNOWN_STACK: Record<string, string[]> = {
 };
 
 export function memoryPath(root: string): string {
-  return join(root, CACHE_DIR, CACHE_FILE);
+  return memoryPathForPackage(root, ".");
 }
 
-export async function scanProject(root: string): Promise<ProjectMemory> {
-  const packageJson = await readPackageJson(root);
+export function memoryPathForPackage(root: string, packageRoot: string): string {
+  if (packageRoot === ".") {
+    return join(root, CACHE_DIR, CACHE_FILE);
+  }
+  const slug = packageRoot.replace(/[\\/]+/g, "__").replace(/[^a-zA-Z0-9_.-]/g, "_");
+  return join(root, CACHE_DIR, `cache.${slug}.json`);
+}
+
+export async function scanProject(root: string, packageRoot = "."): Promise<ProjectMemory> {
+  const packagePath = packageRoot === "." ? root : join(root, packageRoot);
+  const packageJson = await readPackageJson(packagePath);
   const allDeps = {
     ...(packageJson.dependencies ?? {}),
     ...(packageJson.devDependencies ?? {})
@@ -34,16 +43,18 @@ export async function scanProject(root: string): Promise<ProjectMemory> {
   }
 
   const packageManager = await detectPackageManager(root, packageJson.packageManager);
-  const sourceRoots = await existingDirectories(root, ["src", "app", "pages", "core", "bridge", "lib"]);
-  const testRoots = await existingDirectories(root, ["test", "tests", "__tests__", "spec"]);
-  const frameworkFiles = await existingFiles(root, ["package.json", "tsconfig.json", "vite.config.ts", "next.config.js", "svelte.config.js"]);
+  const sourceRoots = await existingDirectories(packagePath, ["src", "app", "pages", "core", "bridge", "lib"]);
+  const testRoots = await existingDirectories(packagePath, ["test", "tests", "__tests__", "spec"]);
+  const frameworkFiles = await existingFiles(packagePath, ["package.json", "tsconfig.json", "vite.config.ts", "next.config.js", "svelte.config.js"]);
   const scripts = normalizeScripts(packageJson.scripts);
-  const aliases = await parseAliases(root);
+  const aliases = await parseAliases(packagePath);
   const framework = detectFramework(allDeps, frameworkFiles);
+  const workspaceRoots = await detectWorkspaceRoots(root);
 
   return {
     version: 1,
     root,
+    packageRoot,
     scannedAt: new Date().toISOString(),
     stack: [...stack].sort(),
     packageManager,
@@ -52,26 +63,43 @@ export async function scanProject(root: string): Promise<ProjectMemory> {
     likelyTestCommand: inferTestCommand(scripts, packageManager),
     sourceRoots,
     testRoots,
+    workspaceRoots,
     aliases,
     frameworkFiles
   };
 }
 
-export async function loadProjectMemory(root: string): Promise<ProjectMemory | null> {
+export async function loadProjectMemory(root: string, packageRoot = "."): Promise<ProjectMemory | null> {
   try {
-    return JSON.parse(await readFile(memoryPath(root), "utf8")) as ProjectMemory;
+    return normalizeLoadedMemory(
+      root,
+      JSON.parse(await readFile(memoryPathForPackage(root, packageRoot), "utf8")) as Partial<ProjectMemory>
+    );
   } catch {
+    if (packageRoot !== ".") {
+      return loadProjectMemory(root, ".");
+    }
     return null;
   }
 }
 
 export async function saveProjectMemory(root: string, memory: ProjectMemory): Promise<void> {
   await mkdir(join(root, CACHE_DIR), { recursive: true });
-  await writeFile(memoryPath(root), `${JSON.stringify(memory, null, 2)}\n`, "utf8");
+  await writeFile(memoryPathForPackage(root, memory.packageRoot), `${JSON.stringify(memory, null, 2)}\n`, "utf8");
 }
 
 export async function clearProjectMemory(root: string): Promise<void> {
-  await rm(memoryPath(root), { force: true });
+  try {
+    const dir = join(root, CACHE_DIR);
+    const files = await readdir(dir);
+    await Promise.all(
+      files
+        .filter((name) => /^cache(?:\.[^.]+)?\.json$/.test(name))
+        .map((name) => rm(join(dir, name), { force: true }))
+    );
+  } catch {
+    // Missing cache directory is normal.
+  }
 }
 
 async function readPackageJson(root: string): Promise<Record<string, unknown>> {
@@ -190,6 +218,115 @@ async function parseAliases(root: string): Promise<Record<string, string[]>> {
   } catch {
     return {};
   }
+}
+
+async function detectWorkspaceRoots(root: string): Promise<string[]> {
+  const patterns = [
+    ...(await readPnpmWorkspacePatterns(root)),
+    ...(await readPackageJsonWorkspacePatterns(root))
+  ];
+  if (patterns.length === 0) {
+    return [];
+  }
+
+  const roots = new Set<string>();
+  for (const pattern of patterns) {
+    for (const candidate of await expandWorkspacePattern(root, pattern)) {
+      roots.add(candidate);
+    }
+  }
+
+  return [...roots].sort();
+}
+
+async function readPnpmWorkspacePatterns(root: string): Promise<string[]> {
+  try {
+    const yaml = await readFile(join(root, "pnpm-workspace.yaml"), "utf8");
+    return yaml
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("-"))
+      .map((line) => line.replace(/^-+\s*/, "").replace(/^['"]|['"]$/g, ""))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function readPackageJsonWorkspacePatterns(root: string): Promise<string[]> {
+  const packageJson = await readPackageJson(root);
+  const workspaces = packageJson.workspaces;
+  if (Array.isArray(workspaces)) {
+    return workspaces.filter((value): value is string => typeof value === "string");
+  }
+  if (workspaces && typeof workspaces === "object") {
+    const packages = (workspaces as { packages?: unknown }).packages;
+    if (Array.isArray(packages)) {
+      return packages.filter((value): value is string => typeof value === "string");
+    }
+  }
+  return [];
+}
+
+async function expandWorkspacePattern(root: string, pattern: string): Promise<string[]> {
+  const normalized = pattern.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+  if (!normalized) {
+    return [];
+  }
+
+  if (!normalized.includes("*")) {
+    return (await isWorkspacePackage(root, normalized)) ? [normalized] : [];
+  }
+
+  if (normalized.endsWith("/*")) {
+    const base = normalized.slice(0, -2);
+    const basePath = join(root, base);
+    try {
+      const entries = await readdir(basePath, { withFileTypes: true });
+      const dirs = entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => `${base}/${entry.name}`.replace(/\\/g, "/"));
+      const accepted: string[] = [];
+      for (const dir of dirs) {
+        if (await isWorkspacePackage(root, dir)) {
+          accepted.push(dir);
+        }
+      }
+      return accepted;
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+async function isWorkspacePackage(root: string, relativePath: string): Promise<boolean> {
+  try {
+    const file = await stat(join(root, relativePath, "package.json"));
+    return file.isFile();
+  } catch {
+    return false;
+  }
+}
+
+function normalizeLoadedMemory(root: string, raw: Partial<ProjectMemory>): ProjectMemory {
+  return {
+    version: 1,
+    root,
+    packageRoot: raw.packageRoot ?? ".",
+    scannedAt: raw.scannedAt ?? new Date(0).toISOString(),
+    stack: raw.stack ?? [],
+    packageManager: raw.packageManager,
+    framework: raw.framework ?? "node",
+    scripts: raw.scripts ?? {},
+    likelyTestCommand: raw.likelyTestCommand,
+    sourceRoots: raw.sourceRoots ?? [],
+    testRoots: raw.testRoots ?? [],
+    workspaceRoots: raw.workspaceRoots ?? [],
+    aliases: raw.aliases ?? {},
+    frameworkFiles: raw.frameworkFiles ?? []
+  };
 }
 
 function detectFramework(deps: Record<string, unknown>, files: string[]): string {

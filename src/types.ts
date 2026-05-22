@@ -8,6 +8,8 @@ export interface AnalysisResult {
 
 export interface ProjectContext {
   root: string;
+  packageRoot?: string;
+  workspaceRoots?: string[];
   stack: string[];
   packageManager?: string;
   framework?: string;
@@ -70,6 +72,7 @@ export interface DoctorReport {
 export interface ProjectMemory {
   version: 1;
   root: string;
+  packageRoot: string;
   scannedAt: string;
   stack: string[];
   packageManager?: string;
@@ -78,6 +81,7 @@ export interface ProjectMemory {
   likelyTestCommand?: string;
   sourceRoots: string[];
   testRoots: string[];
+  workspaceRoots: string[];
   aliases: Record<string, string[]>;
   frameworkFiles: string[];
 }
