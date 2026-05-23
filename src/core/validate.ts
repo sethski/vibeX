@@ -74,6 +74,9 @@ export async function validateOutput(
     }
 
     const basePackage = normalizePackageName(specifier);
+    if (isKnownBuiltinImport(basePackage)) {
+      continue;
+    }
     if (!packageNames.has(basePackage)) {
       violations.push(`unknown-import:${specifier}`);
     }
@@ -126,6 +129,27 @@ function collectImportSpecifiers(text: string): string[] {
       specs.add(spec);
     }
   }
+  const pythonImportRegex = /^\+\s*import\s+([A-Za-z_][A-Za-z0-9_\.]*)/gm;
+  for (const match of text.matchAll(pythonImportRegex)) {
+    specs.add(match[1]);
+  }
+  const pythonFromRegex = /^\+\s*from\s+([A-Za-z_][A-Za-z0-9_\.]*)\s+import\b/gm;
+  for (const match of text.matchAll(pythonFromRegex)) {
+    specs.add(match[1]);
+  }
+  const goImportRegex = /^\+\s*import\s+"([^"]+)"/gm;
+  for (const match of text.matchAll(goImportRegex)) {
+    specs.add(match[1]);
+  }
+  const rustUseRegex = /^\+\s*use\s+([A-Za-z_][A-Za-z0-9_:]*)/gm;
+  for (const match of text.matchAll(rustUseRegex)) {
+    const first = match[1].split("::")[0];
+    specs.add(first);
+  }
+  const csharpUsingRegex = /^\+\s*using\s+([A-Za-z_][A-Za-z0-9_\.]*)\s*;/gm;
+  for (const match of text.matchAll(csharpUsingRegex)) {
+    specs.add(match[1]);
+  }
   return [...specs];
 }
 
@@ -174,9 +198,42 @@ async function loadPackageNames(root: string): Promise<Set<string>> {
 }
 
 function normalizePackageName(specifier: string): string {
+  if (specifier.includes("::")) {
+    return specifier.split("::")[0];
+  }
+  if (specifier.includes(".")) {
+    return specifier.split(".")[0];
+  }
   if (specifier.startsWith("@")) {
     const [scope, name] = specifier.split("/").slice(0, 2);
     return scope && name ? `${scope}/${name}` : specifier;
   }
   return specifier.split("/")[0];
+}
+
+function isKnownBuiltinImport(basePackage: string): boolean {
+  const builtins = new Set([
+    "os",
+    "sys",
+    "typing",
+    "pathlib",
+    "json",
+    "re",
+    "dataclasses",
+    "fmt",
+    "errors",
+    "context",
+    "time",
+    "strings",
+    "http",
+    "std",
+    "core",
+    "alloc",
+    "crate",
+    "self",
+    "super",
+    "System",
+    "Microsoft"
+  ]);
+  return builtins.has(basePackage);
 }

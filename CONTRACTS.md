@@ -191,6 +191,19 @@ Response:
 - `retry_prompt: string | null`
 - optional `cleaned_output` and `warning` for retry mode
 
+### Browser / Tray Contracts
+
+- Browser watcher/bookmarklet contract is exposed by `src/plugins/browser.ts`:
+  - watcher channel `vibex-browser`
+  - request/response events:
+    - `vibex.optimize.request`
+    - `vibex.optimize.response`
+- Tray contract is exposed by `src/ui/tray.ts` and includes:
+  - server health
+  - optimize enable/disable
+  - auth mode
+  - cache actions
+
 ### Bridge endpoints
 
 - `POST /bridge/ide`:

@@ -30,6 +30,8 @@ v1.10 MVP:
 - Local intent triple cache for `raw -> stp -> output`
 - Hybrid Python core scaffolding under `core/*.py` and adapter wrapper under `plugins/claude.py`
 - Root config surface under `config/defaults.json`, `config/rules.json`, `config/models.json`
+- Browser watcher/bookmarklet contracts for universal textarea integrations
+- Tray UI contract for local status/settings surfaces
 - Confidence scores per context item in preview output
 - `vibex explain --json` for decision traces
 - Low-confidence fallback prompt policy
@@ -197,6 +199,12 @@ node dist/src/cli.js browser install
 node dist/src/cli.js browser bridge --json "fix auth"
 ```
 
+SPEC2 acceptance matrix:
+
+```bash
+npm run spec2:check
+```
+
 Stdin mode:
 
 ```bash
@@ -284,6 +292,7 @@ npm run build
 npm run pack:dry
 npm run bench:context
 npm run bench:check
+npm run spec2:check
 npm run release:hardening
 ```
 

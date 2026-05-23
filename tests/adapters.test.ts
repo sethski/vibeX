@@ -5,6 +5,11 @@ import { join } from "node:path";
 import { createCopilotAdapterTemplate } from "../src/plugins/copilot.js";
 import { createCursorOptimizeRequest, defaultCursorBadgeState } from "../src/plugins/cursor.js";
 import { createIdeOptimizeBadgePayload } from "../src/plugins/ide-light.js";
+import {
+  browserBookmarkletSnippet,
+  createBrowserWatcherContract
+} from "../src/plugins/browser.js";
+import { createTrayContract } from "../src/ui/tray.js";
 
 test("cursor adapter request contract is SPEC2 compatible", () => {
   const payload = createCursorOptimizeRequest("fix auth", {
@@ -45,4 +50,35 @@ test("claude python wrapper composes model+prompt flags", async () => {
   assert.match(source, /haiku/);
   assert.match(source, /-p/);
   assert.match(source, /inject_haiku/);
+});
+
+test("browser watcher contract exposes SPEC2 payload and event channels", () => {
+  const contract = createBrowserWatcherContract();
+
+  assert.equal(contract.version, 1);
+  assert.equal(contract.channel, "vibex-browser");
+  assert.equal(contract.events.optimizeRequest, "vibex.optimize.request");
+  assert.equal(contract.payloadShape.raw_prompt, "string");
+});
+
+test("browser bookmarklet snippet targets local optimize endpoint", () => {
+  const bookmarklet = browserBookmarkletSnippet();
+
+  assert.match(bookmarklet, /^javascript:/);
+  assert.match(decodeURIComponent(bookmarklet.slice("javascript:".length)), /127\.0\.0\.1:7742\/optimize/);
+  assert.match(decodeURIComponent(bookmarklet.slice("javascript:".length)), /raw_prompt/);
+});
+
+test("tray contract includes status and expected actions", () => {
+  const tray = createTrayContract({
+    serverHealthy: true,
+    optimizeEnabled: true,
+    authMode: "open",
+    cachePath: ".vibex/cache/intents.json"
+  });
+
+  assert.equal(tray.version, 1);
+  assert.equal(tray.title, "vibeX");
+  assert.equal(tray.actions.length, 4);
+  assert.equal(tray.actions.some((action) => action.id === "clear-intent-cache"), true);
 });

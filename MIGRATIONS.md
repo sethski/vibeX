@@ -58,3 +58,9 @@
 - Add `POST /sanitize` and `POST /validate`.
 - Add optional auth token protection (`VIBEX_AUTH_TOKEN`) for optimize/sanitize/validate endpoints.
 - Add CLI commands `stp`, `sanitize`, `validate`, plus `/vibe` alias support.
+
+## v1.10 -> v1.10.1
+
+- Add tray and browser watcher/bookmarklet contracts for v0.3 adapter surfaces.
+- Add SPEC2 acceptance matrix script and include it in release hardening.
+- Tighten sanitizer/validator/retry heuristics for diff extraction, import/path checks, and deterministic correction prompts.

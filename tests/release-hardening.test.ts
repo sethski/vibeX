@@ -55,9 +55,11 @@ test("spec2 config and python metadata artifacts are present", async () => {
     claude: { modelFlag: string | null };
   };
   const pyproject = await readFile(join(root, "pyproject.toml"), "utf8");
+  const spec2Check = await readFile(join(root, "scripts", "check-spec2-acceptance.mjs"), "utf8");
 
   assert.equal(typeof defaults.retryLimits.maxAttempts, "number");
   assert.equal(typeof rules.outputRules.requiredTag, "string");
   assert.equal(Object.hasOwn(models, "claude"), true);
   assert.match(pyproject, /\[project\]/);
+  assert.match(spec2Check, /check\("optimize legacy payload"/);
 });

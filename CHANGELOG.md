@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.10.1
+
+- Add v0.3 contract surfaces:
+  - `src/ui/tray.ts` tray status/settings contract
+  - browser watcher/bookmarklet contracts in `src/plugins/browser.ts`
+- Add SPEC2 acceptance matrix script:
+  - `scripts/check-spec2-acceptance.mjs`
+  - `npm run spec2:check`
+- Extend release hardening to include SPEC2 acceptance checks.
+- Tighten v0.2 sanitize/validate behavior:
+  - better fenced diff extraction and prose stripping
+  - stricter path plausibility and exact-line-ref checks
+  - broader import detection heuristics (JS/Python/Go/Rust/C# patterns)
+  - deterministic retry-correction prompt generation
+- Add focused tests for adapter contracts and sanitize/validate edge cases.
+
 ## 1.10.0
 
 - Start SPEC2 hybrid implementation on top of v1.9:

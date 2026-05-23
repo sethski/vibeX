@@ -53,6 +53,35 @@ test("validate flags unknown package imports", async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+test("validate parses python/go/rust/csharp style imports and flags unknown ones", async () => {
+  const root = await mkdtemp(join(tmpdir(), "vibex-validate-multi-import-"));
+  await writeFile(join(root, "package.json"), JSON.stringify({ name: "tmp", private: true, dependencies: {} }));
+  await writeFile(join(root, "src.ts"), "export {};\n");
+
+  const diff = [
+    "diff --git a/src.ts b/src.ts",
+    "@@ -1,1 +1,8 @@",
+    "+import imaginary_pkg",
+    "+from totally_fake.lib import x",
+    "+import \"not/a/real/go/pkg\"",
+    "+use fakecrate::module::Thing;",
+    "+using Fake.Company.Product;",
+    "+import os",
+    "+use std::fmt;"
+  ].join("\n");
+  const result = await validateOutput(diff, { projectRoot: root, constraints: ["diff-only"] });
+
+  assert.equal(result.valid, false);
+  assert.equal(result.violations.includes("unknown-import:imaginary_pkg"), true);
+  assert.equal(result.violations.includes("unknown-import:totally_fake.lib"), true);
+  assert.equal(result.violations.includes("unknown-import:not/a/real/go/pkg"), true);
+  assert.equal(result.violations.includes("unknown-import:fakecrate"), true);
+  assert.equal(result.violations.includes("unknown-import:Fake.Company.Product"), true);
+  assert.equal(result.violations.includes("unknown-import:os"), false);
+  assert.equal(result.violations.includes("unknown-import:std"), false);
+  await rm(root, { recursive: true, force: true });
+});
+
 test("retry loop emits deterministic canonical warning output", async () => {
   const result = await sanitizeValidateWithRetry(
     "prose only output",
