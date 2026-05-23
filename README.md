@@ -26,6 +26,13 @@ vibex "<your prompt>"
 vibex --json "<your prompt>"
 ```
 
+Cross-shell helper (`vibe`/`vx`) with prompt suggestions:
+
+```bash
+vibex terminal install --shell bash
+# use zsh | fish | powershell as needed
+```
+
 ### Cursor
 
 ```bash

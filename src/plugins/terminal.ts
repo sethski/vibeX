@@ -4,12 +4,61 @@ export interface TerminalPreview {
 }
 
 export type ShellKind = "bash" | "zsh" | "fish" | "powershell";
+const SUGGESTION_LIMIT = 8;
+
+const BASE_PROMPT_SUGGESTIONS = [
+  "debug failing tests in <file>, identify root cause, apply minimal patch, add regression test",
+  "implement <feature> in <file>, include edge cases and unit tests",
+  "refactor <module> for readability without behavior change, keep API stable",
+  "optimize performance in <path>, profile bottleneck and provide before/after evidence",
+  "add validation for <input> in <file>, return clear error message and tests",
+  "fix type errors in <file>, explain each change briefly and keep runtime behavior intact",
+  "review recent diff for risks, list blocking issues first, include exact file/line refs",
+  "write migration plan for <change>, include rollout, fallback, and verification checklist"
+];
 
 export function formatTerminalPreview(optimized: string): TerminalPreview {
   return {
     shouldOffer: optimized.trim().length > 0,
     preview: `[vibeX] Optimize? y/N\n${optimized}`
   };
+}
+
+export function buildPromptSuggestions(current: string): string[] {
+  const raw = current.trim();
+  const lower = raw.toLowerCase();
+  const tokens = lower.split(/\s+/).filter(Boolean);
+  const scored = BASE_PROMPT_SUGGESTIONS
+    .map((suggestion) => {
+      const s = suggestion.toLowerCase();
+      let score = 0;
+      if (!raw) {
+        score = 1;
+      } else {
+        for (const token of tokens) {
+          if (s.includes(token)) {
+            score += 2;
+          }
+        }
+        if (s.startsWith(lower)) {
+          score += 3;
+        }
+      }
+      return { suggestion, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.suggestion.localeCompare(b.suggestion))
+    .map((item) => item.suggestion);
+
+  const contextual = raw
+    ? [
+        `${raw} — include root cause, exact file paths, and tests`,
+        `${raw} — keep response token-efficient and implementation-ready`,
+        `${raw} — output actionable steps first, then patch details`
+      ]
+    : [];
+
+  return [...contextual, ...scored].slice(0, SUGGESTION_LIMIT);
 }
 
 export function isShellKind(value: string): value is ShellKind {
@@ -26,37 +75,87 @@ export function defaultShellKind(): ShellKind {
 export function buildShellInstallSnippet(shell: ShellKind): string {
   if (shell === "fish") {
     return [
-      "function vx",
+      "function vibe",
       "  if test (count $argv) -eq 0",
-      "    echo \"usage: vx <prompt>\" >&2",
+      "    echo \"usage: vibe <prompt>\" >&2",
+      "    echo \"Try: vibex terminal suggest --shell fish\" >&2",
       "    return 1",
       "  end",
       "  vibex --copy \"$argv\"",
-      "end"
+      "end",
+      "functions -e vx >/dev/null 2>&1",
+      "alias vx=vibe",
+      "complete -c vibe -f -a \"(vibex terminal suggest --shell fish --current (commandline -cp))\"",
+      "complete -c vx -f -a \"(vibex terminal suggest --shell fish --current (commandline -cp))\""
     ].join("\n");
   }
 
   if (shell === "powershell") {
     return [
-      "function vx {",
+      "function vibe {",
       "  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$PromptParts)",
       "  if (-not $PromptParts -or $PromptParts.Count -eq 0) {",
-      "    Write-Error \"usage: vx <prompt>\"",
+      "    Write-Error \"usage: vibe <prompt>\"",
+      "    Write-Host \"Try: vibex terminal suggest --shell powershell\"",
       "    return",
       "  }",
       "  vibex --copy ($PromptParts -join \" \")",
+      "}",
+      "Set-Alias -Name vx -Value vibe -Scope Global",
+      "Register-ArgumentCompleter -CommandName vibe,vx -ScriptBlock {",
+      "  param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)",
+      "  $line = $commandAst.ToString()",
+      "  $current = \"\"",
+      "  if ($line.Length -gt $commandName.Length) {",
+      "    $current = $line.Substring($commandName.Length).TrimStart()",
+      "  }",
+      "  vibex terminal suggest --shell powershell --current $current | ForEach-Object {",
+      "    [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)",
+      "  }",
       "}"
     ].join("\n");
   }
 
+  if (shell === "zsh") {
+    return [
+      "vibe() {",
+      "  if [ \"$#\" -eq 0 ]; then",
+      "    echo \"usage: vibe <prompt>\" >&2",
+      "    echo \"Try: vibex terminal suggest --shell zsh\" >&2",
+      "    return 1",
+      "  fi",
+      "  vibex --copy \"$*\"",
+      "}",
+      "alias vx='vibe'",
+      "_vibex_vibe_complete() {",
+      "  local current=\"${words[2,-1]}\"",
+      "  local -a suggestions",
+      "  suggestions=(\"${(@f)$(vibex terminal suggest --shell zsh --current \"$current\")}\")",
+      "  compadd -- $suggestions",
+      "}",
+      "compdef _vibex_vibe_complete vibe",
+      "compdef _vibex_vibe_complete vx"
+    ].join("\n");
+  }
+
   return [
-    "vx() {",
+    "vibe() {",
     "  if [ \"$#\" -eq 0 ]; then",
-    "    echo \"usage: vx <prompt>\" >&2",
+    "    echo \"usage: vibe <prompt>\" >&2",
+    "    echo \"Try: vibex terminal suggest --shell bash\" >&2",
     "    return 1",
     "  fi",
     "  vibex --copy \"$*\"",
-    "}"
+    "}",
+    "alias vx='vibe'",
+    "_vibex_vibe_complete() {",
+    "  local line=\"${COMP_LINE#${COMP_WORDS[0]}}\"",
+    "  line=\"${line# }\"",
+    "  local IFS=$'\\n'",
+    "  COMPREPLY=($(vibex terminal suggest --shell bash --current \"$line\"))",
+    "}",
+    "complete -F _vibex_vibe_complete vibe",
+    "complete -F _vibex_vibe_complete vx"
   ].join("\n");
 }
 

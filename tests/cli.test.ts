@@ -199,8 +199,29 @@ test("cli terminal install returns shell snippet", async () => {
   const body = JSON.parse(stdout) as { shell: string; snippet: string };
 
   assert.equal(body.shell, "bash");
-  assert.match(body.snippet, /vx\(\)/);
+  assert.match(body.snippet, /vibe\(\)/);
   assert.match(body.snippet, /vibex --copy/);
+  assert.match(body.snippet, /complete -F _vibex_vibe_complete vibe/);
+});
+
+test("cli terminal suggest returns cross-shell prompt hints", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "terminal",
+    "suggest",
+    "--json",
+    "--shell",
+    "zsh",
+    "--current",
+    "fix auth loop"
+  ]);
+  const body = JSON.parse(stdout) as { shell: string; current: string; suggestions: string[] };
+
+  assert.equal(body.shell, "zsh");
+  assert.equal(body.current, "fix auth loop");
+  assert.equal(Array.isArray(body.suggestions), true);
+  assert.equal(body.suggestions.length > 0, true);
+  assert.match(body.suggestions[0], /fix auth loop/i);
 });
 
 test("cli terminal preview returns bridge payload", async () => {

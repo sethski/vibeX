@@ -23,6 +23,7 @@ import { runHotkeyListener } from "./plugins/hotkey-listener.js";
 import { clearHotkeyProfile, loadHotkeyProfile, saveHotkeyProfile } from "./plugins/hotkey-profile.js";
 import { buildIdeInstallSnippet, createIdeBridgePayload, isEditorKind } from "./plugins/ide-light.js";
 import {
+  buildPromptSuggestions,
   buildShellHotkeySnippet,
   buildShellInstallSnippet,
   defaultShellKind,
@@ -185,6 +186,21 @@ async function main(): Promise<void> {
         console.log(JSON.stringify({ shell: shellValue, snippet }, null, 2));
       } else {
         console.log(snippet);
+      }
+      return;
+    }
+
+    if (subcommand === "suggest") {
+      const shellValue = consumeOption("--shell");
+      if (shellValue && !isShellKind(shellValue)) {
+        throw new Error(`Unsupported shell: ${shellValue}`);
+      }
+      const current = consumeOption("--current") ?? (await resolvePromptArg(args));
+      const suggestions = buildPromptSuggestions(current);
+      if (json) {
+        console.log(JSON.stringify({ shell: shellValue ?? defaultShellKind(), current, suggestions }, null, 2));
+      } else {
+        console.log(suggestions.join("\n"));
       }
       return;
     }
