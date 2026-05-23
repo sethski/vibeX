@@ -1,4 +1,6 @@
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { analyzePrompt } from "../core/analyzer.js";
 import { compressPrompt } from "../core/compressor.js";
 import { grabContext } from "../core/context-grabber.js";
@@ -287,7 +289,10 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, "/")}`) {
+const entryArg = process.argv[1];
+const isDirectRun = entryArg ? import.meta.url === pathToFileURL(resolve(entryArg)).href : false;
+
+if (isDirectRun) {
   await createServer().listen(Number(process.env.VIBEX_PORT ?? 7742));
   console.log(`vibeX server listening on http://127.0.0.1:${process.env.VIBEX_PORT ?? 7742}`);
 }

@@ -31,7 +31,7 @@
     "release:hardening": "npm run test && npm run typecheck && npm run bench:check && npm run quality:gate && npm run spec2:check && npm run pack:dry",
     "publish:check": "npm run release:hardening",
     "publish:public": "npm publish --access public",
-    "dev:server": "tsx src/bridge/server.ts"
+    "dev:server": "tsx src/bridge/start.ts"
   },
   "engines": {
     "node": ">=20"
