@@ -18,11 +18,12 @@ export async function sanitizeOutput(
 
   let lines = aiOutput.split(/\r?\n/);
   if (noExplanations) {
-    lines = lines.filter((line) => !/^\s*(here('| i)s|note that|you should|let('|’)s)\b/i.test(line));
+    lines = lines.filter((line) => !/^\s*(here('| i)s|note that|you should|let('|’)s|this fixes|updated code)\b/i.test(line));
   }
 
   if (keepDiffOnly) {
-    const diffLines = lines.filter((line) => {
+    const fencedDiff = extractFencedDiffBlocks(lines);
+    const diffLines = (fencedDiff.length > 0 ? fencedDiff : lines).filter((line) => {
       const trimmed = line.trim();
       return trimmed.startsWith("diff ")
         || trimmed.startsWith("@@")
@@ -35,11 +36,51 @@ export async function sanitizeOutput(
     if (diffLines.length === 0) {
       violations.push("missing-diff-content");
     } else {
-      lines = diffLines;
+      lines = dedupeSequential(diffLines);
     }
   }
 
   const cleaned = lines.join("\n").trim();
   const cleanedOutput = cleaned ? `${requiredTag}\n${cleaned}` : requiredTag;
   return { cleanedOutput, violations };
+}
+
+function extractFencedDiffBlocks(lines: string[]): string[] {
+  const out: string[] = [];
+  let inFence = false;
+  let isDiffFence = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```")) {
+      if (!inFence) {
+        inFence = true;
+        isDiffFence = trimmed === "```diff" || trimmed === "```patch";
+        if (isDiffFence) {
+          out.push("```diff");
+        }
+      } else {
+        if (isDiffFence) {
+          out.push("```");
+        }
+        inFence = false;
+        isDiffFence = false;
+      }
+      continue;
+    }
+    if (inFence && isDiffFence) {
+      out.push(line);
+    }
+  }
+  return out;
+}
+
+function dedupeSequential(lines: string[]): string[] {
+  const out: string[] = [];
+  for (const line of lines) {
+    if (out.at(-1) === line) {
+      continue;
+    }
+    out.push(line);
+  }
+  return out;
 }

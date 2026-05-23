@@ -33,7 +33,7 @@ export async function sanitizeValidateWithRetry(
       };
     }
     lastViolations = validated.violations;
-    current = `${sanitized.cleanedOutput}\n# retry: ${validated.retryPrompt ?? "constraint-check"}`;
+    current = `${sanitized.cleanedOutput}\n# retry: ${buildDeterministicRetryPrompt(validated.violations)}`;
     attempt += 1;
   }
 
@@ -45,4 +45,30 @@ export async function sanitizeValidateWithRetry(
     attempts: maxAttempts,
     warning: "constraint-violation"
   };
+}
+
+function buildDeterministicRetryPrompt(violations: string[]): string {
+  const canonical = [...new Set(violations)].sort();
+  if (canonical.length === 0) {
+    return "constraint-check";
+  }
+  const tokens = canonical.map((violation) => {
+    if (violation.startsWith("missing-file:")) {
+      return "use-existing-files";
+    }
+    if (violation.startsWith("unknown-import:")) {
+      return "use-existing-imports";
+    }
+    if (violation === "diff-only-violation") {
+      return "diff-only";
+    }
+    if (violation === "no-explanations-violation") {
+      return "no-prose";
+    }
+    if (violation === "exact-line-refs-violation") {
+      return "add-line-refs";
+    }
+    return violation;
+  });
+  return `↻ ${tokens.join(" | ")}`;
 }
