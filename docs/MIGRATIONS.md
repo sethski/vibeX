@@ -33,7 +33,7 @@
 
 ## v1.6 -> v1.7
 
-- Stable contracts documented in `CONTRACTS.md`.
+- Stable contracts documented in `docs/CONTRACTS.md`.
 - Benchmark baseline artifacts added under `benchmarks/`.
 - New release-hardening checks added, no runtime contract breaks.
 

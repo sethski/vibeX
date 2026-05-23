@@ -1,4 +1,3 @@
-<img width="1024" height="1024" alt="ChatGPT Image May 23, 2026, 04_47_19 PM" src="https://github.com/user-attachments/assets/83b8c26e-d15a-469a-8fe6-504711b1503b" />
 # vibeX
 
 ![vibeX logo](assets/vibex-logo.png)
@@ -93,3 +92,4 @@ npm run publish:public
 - Token-efficient by default (no max-token flag required).
 - Hybrid architecture: TypeScript runtime + Python core modules in `core/*.py`.
 - License: MIT ([LICENSE](LICENSE)).
+- Docs: [Changelog](docs/CHANGELOG.md), [Contracts](docs/CONTRACTS.md), [Migrations](docs/MIGRATIONS.md).

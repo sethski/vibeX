@@ -86,8 +86,8 @@
 ## 1.7.0
 
 - Add stable-core hardening artifacts:
-  - `CONTRACTS.md`
-  - `MIGRATIONS.md`
+  - `docs/CONTRACTS.md`
+  - `docs/MIGRATIONS.md`
   - `benchmarks/context-baseline.json`
 - Add benchmark regression checker:
   - `npm run bench:check`

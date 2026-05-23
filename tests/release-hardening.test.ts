@@ -5,8 +5,8 @@ import { join } from "node:path";
 
 test("stable contract and migration docs exist", async () => {
   const root = process.cwd();
-  const contracts = await readFile(join(root, "CONTRACTS.md"), "utf8");
-  const migrations = await readFile(join(root, "MIGRATIONS.md"), "utf8");
+  const contracts = await readFile(join(root, "docs", "CONTRACTS.md"), "utf8");
+  const migrations = await readFile(join(root, "docs", "MIGRATIONS.md"), "utf8");
 
   assert.match(contracts, /Stable Contracts/i);
   assert.match(contracts, /POST \/optimize/);
