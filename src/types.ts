@@ -30,6 +30,8 @@ export interface CompressionOptions {
   target?: TargetProfile;
   policy?: PolicyMode;
   preset?: string;
+  stp?: boolean;
+  constraints?: string[];
   include?: ContextKey[];
   exclude?: ContextKey[];
   explain?: boolean;
@@ -104,4 +106,21 @@ export interface ContextGrabberOptions {
   root?: string;
   activeFile?: string;
   cursorLine?: number;
+}
+
+export interface Spec2IdeContext {
+  file?: string;
+  line_start?: number;
+  line_end?: number;
+  selection?: string;
+  stack?: string;
+  error?: string;
+  root?: string;
+}
+
+export interface Spec2OptimizeResponse {
+  stp_prompt: string;
+  model_flag: string | null;
+  state_anchor: string;
+  confidence: number;
 }

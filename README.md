@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v1.9 MVP:
+v1.10 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -22,6 +22,14 @@ v1.9 MVP:
 - Team governance config with org defaults and named presets
 - Prompt quality scoring (`vibex score`, `POST /score`)
 - Optimization drift/privacy regression gate (`npm run quality:gate`)
+- SPEC2 dual optimize payload support (`prompt/context` and `raw_prompt/ide_context`)
+- STP symbolic output path (`vibex stp`, `stp_prompt` in optimize responses)
+- 3-line state anchor in optimize responses
+- Optional localhost auth token guard via `VIBEX_AUTH_TOKEN`
+- New sanitize/validate API endpoints with local retry fallback
+- Local intent triple cache for `raw -> stp -> output`
+- Hybrid Python core scaffolding under `core/*.py` and adapter wrapper under `plugins/claude.py`
+- Root config surface under `config/defaults.json`, `config/rules.json`, `config/models.json`
 - Confidence scores per context item in preview output
 - `vibex explain --json` for decision traces
 - Low-confidence fallback prompt policy
@@ -89,6 +97,15 @@ Score optimized prompt quality:
 
 ```bash
 node dist/src/cli.js score --json "please fix auth redirect issue"
+```
+
+STP / SPEC2 flows:
+
+```bash
+node dist/src/cli.js stp --context-json "{\"activeFile\":\"src/auth.ts\",\"cursorLine\":42}" "fix auth redirect thing"
+node dist/src/cli.js sanitize --constraints diff-only,no-explanations "```diff\n+const x=1\n```"
+node dist/src/cli.js validate --retry --constraints diff-only,no-explanations "ai output text"
+node dist/src/cli.js /vibe "fix auth redirect"
 ```
 
 Policy:
@@ -223,7 +240,22 @@ curl -X POST http://127.0.0.1:7742/bridge/browser \
 curl -X POST http://127.0.0.1:7742/score \
   -H "content-type: application/json" \
   -d "{\"prompt\":\"fix auth\",\"context\":{\"activeFile\":\"src/auth.ts\",\"stack\":[\"node\"]}}"
+
+curl -X POST http://127.0.0.1:7742/optimize \
+  -H "content-type: application/json" \
+  -d "{\"raw_prompt\":\"fix auth\",\"ide_context\":{\"file\":\"src/auth.ts\",\"line_start\":42,\"stack\":\"Next14\",\"error\":\"session undefined\"}}"
+
+curl -X POST http://127.0.0.1:7742/sanitize \
+  -H "content-type: application/json" \
+  -d "{\"ai_output\":\"Here's how...\\n```diff\\n+const x=1\\n```\",\"constraints\":[\"diff-only\",\"no-explanations\"]}"
+
+curl -X POST http://127.0.0.1:7742/validate \
+  -H "content-type: application/json" \
+  -d "{\"ai_output\":\"plain text output\",\"constraints\":[\"diff-only\",\"no-explanations\"],\"project_root\":\".\"}"
 ```
+
+When `VIBEX_AUTH_TOKEN` is set, `POST /optimize`, `POST /sanitize`, and `POST /validate`
+require header `x-vibex-token: <token>` (or `Authorization: Bearer <token>`). If unset, local open mode is used.
 
 ## Project Memory
 

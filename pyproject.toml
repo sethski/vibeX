@@ -1,0 +1,15 @@
+[project]
+name = "vibex-core"
+version = "0.1.0"
+description = "vibeX local python core modules"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+

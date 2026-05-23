@@ -1,6 +1,6 @@
 {
   "name": "vibex",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Local-first prompt optimizer and context bridge for AI coding tools.",
   "type": "module",
   "license": "MIT",
@@ -23,6 +23,10 @@
   },
   "files": [
     "dist/src",
+    "config/*.json",
+    "core/*.py",
+    "plugins/*.py",
+    "pyproject.toml",
     "CONTRACTS.md",
     "MIGRATIONS.md",
     "benchmarks/context-baseline.json",

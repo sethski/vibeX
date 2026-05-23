@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.10.0
+
+- Start SPEC2 hybrid implementation on top of v1.9:
+  - add Python core modules (`core/compressor.py`, `core/sanitizer.py`, `core/state_anchor.py`, `core/cache.py`, `core/router.py`, `core/validator.py`)
+  - add Python adapter wrapper (`plugins/claude.py`)
+  - add `pyproject.toml`
+- Add root config surface:
+  - `config/defaults.json`
+  - `config/rules.json`
+  - `config/models.json`
+- Extend bridge API:
+  - `POST /optimize` supports both legacy (`prompt/context`) and SPEC2 (`raw_prompt/ide_context`) payloads
+  - add `POST /sanitize`
+  - add `POST /validate`
+  - add optional local auth-token mode via `VIBEX_AUTH_TOKEN`
+- Add STP and state-anchor flow to optimize responses:
+  - `stp_prompt`
+  - `state_anchor`
+  - `model_flag`
+  - `confidence`
+- Add local sanitize/validate retry loop with best-effort fallback warning (`⚠️ constraint-violation`).
+- Add CLI SPEC2 commands:
+  - `vibex stp`
+  - `vibex sanitize`
+  - `vibex validate`
+  - `/vibe` alias support
+- Add adapter-contract-first plugin templates:
+  - `src/plugins/cursor.ts`
+  - `src/plugins/copilot.ts`
+- Add test coverage for dual optimize payloads, auth-token mode, sanitize/validate endpoints, STP/state-anchor/model router, and intent cache.
+
 ## 1.9.0
 
 - Add deterministic optimization quality scoring with component scores:

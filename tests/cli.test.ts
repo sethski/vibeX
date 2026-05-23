@@ -110,6 +110,57 @@ test("cli score returns quality report json", async () => {
   assert.equal(typeof body.quality.components.tokenEfficiency, "number");
 });
 
+test("cli stp returns symbolic prompt", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "stp",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts", cursorLine: 42 }),
+    "fix auth redirect thing"
+  ]);
+
+  assert.match(stdout.trim(), /^→ /);
+  assert.match(stdout, /@src\/auth\.ts:42/);
+  assert.match(stdout, /✓/);
+});
+
+test("cli sanitize returns cleaned output json", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "sanitize",
+    "--json",
+    "--constraints",
+    "diff-only,no-explanations",
+    "Here's how\n```diff\n+ const a = 1\n```"
+  ]);
+  const body = JSON.parse(stdout) as { cleaned_output: string; violations: string[] };
+
+  assert.equal(Array.isArray(body.violations), true);
+  assert.match(body.cleaned_output, /```diff/);
+  assert.doesNotMatch(body.cleaned_output, /Here's how/);
+});
+
+test("cli validate retry returns warning-safe output", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "validate",
+    "--json",
+    "--retry",
+    "--constraints",
+    "diff-only,no-explanations",
+    "Prose only output"
+  ]);
+  const body = JSON.parse(stdout) as { valid: boolean; cleaned_output: string; warning: string | null };
+
+  assert.equal(typeof body.valid, "boolean");
+  assert.equal(typeof body.cleaned_output, "string");
+});
+
+test("cli supports /vibe alias prefix", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "/vibe", "fix auth"]);
+  assert.match(stdout.trim(), /^Fix auth/);
+});
+
 test("json commands do not leak secrets from prompt into context metadata", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
     "dist/src/cli.js",

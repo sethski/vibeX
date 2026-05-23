@@ -49,3 +49,12 @@
 - Add `POST /score` API endpoint for machine-readable quality reports.
 - Add optimization snapshot gate artifact (`benchmarks/optimization-snapshots.json`) and `npm run quality:gate`.
 - Release hardening now runs quality gating in addition to tests/typecheck/benchmark/pack checks.
+
+## v1.9 -> v1.10
+
+- Add SPEC2 hybrid scaffolding with Python core modules under `core/*.py` and wrapper plugin under `plugins/claude.py`.
+- Add root JSON config surface (`config/defaults.json`, `config/rules.json`, `config/models.json`) used by new STP/router/sanitize/validate flows.
+- `POST /optimize` remains backward compatible and now also accepts SPEC2 aliases (`raw_prompt`, `ide_context`).
+- Add `POST /sanitize` and `POST /validate`.
+- Add optional auth token protection (`VIBEX_AUTH_TOKEN`) for optimize/sanitize/validate endpoints.
+- Add CLI commands `stp`, `sanitize`, `validate`, plus `/vibe` alias support.

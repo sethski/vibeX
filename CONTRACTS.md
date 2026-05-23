@@ -1,6 +1,6 @@
 # vibeX Stable Contracts
 
-This document defines stable public contracts for `v1.9.x`.
+This document defines stable public contracts for `v1.10.x`.
 
 ## CLI Contract
 
@@ -57,6 +57,27 @@ vibex score --json "<prompt>"
   - `target: ...`
   - `quality: { score, grade, components }`
 
+### STP / Sanitize / Validate
+
+```bash
+vibex stp [--json] "<prompt>"
+vibex sanitize [--json] [--constraints diff-only,no-explanations] "<ai_output>"
+vibex validate [--json] [--retry] [--constraints ...] [--project-root <path>] "<cleaned_or_raw_output>"
+```
+
+- `vibex stp --json` keys:
+  - `stp_prompt: string`
+  - `model_flag: string | null`
+- `vibex sanitize --json` keys:
+  - `cleaned_output: string`
+  - `violations: string[]`
+- `vibex validate --json` keys:
+  - `valid: boolean`
+  - `violations: string[]`
+  - `retry_prompt?: string | null`
+  - `cleaned_output?: string`
+  - `warning?: string | null`
+
 ### Policy
 
 ```bash
@@ -108,7 +129,20 @@ Response:
   "optimized": "Fix auth ...",
   "analysis": { "isVague": true, "confidence": 0.7, "reasons": [] },
   "tokenEstimate": 42,
-  "contextUsed": ["stack", "activeFile"]
+  "contextUsed": ["stack", "activeFile"],
+  "stp_prompt": "→ fix @src/auth.ts | # node | ✓ diff-only | no-explanations | exact-line-refs",
+  "model_flag": "--model haiku",
+  "state_anchor": "[GOAL] ...\n[DONE] ...\n[NEXT] ...",
+  "confidence": 0.7
+}
+```
+
+`POST /optimize` also accepts SPEC2 aliases:
+
+```json
+{
+  "raw_prompt": "fix auth",
+  "ide_context": { "file": "src/auth.ts", "line_start": 42, "stack": "Next14", "error": "session undefined" }
 }
 ```
 
@@ -129,6 +163,34 @@ Same request shape as `/optimize`, with response keys:
 - `contextUsed`
 - `quality`
 
+### `POST /sanitize`
+
+Request:
+- `ai_output: string`
+- `constraints?: string[]`
+
+Response:
+- `cleaned_output: string`
+- `violations: string[]`
+
+### `POST /validate`
+
+Request:
+- direct validation:
+  - `cleaned_output: string`
+  - `project_root: string`
+  - `constraints?: string[]`
+- retry validation:
+  - `ai_output: string`
+  - `project_root: string`
+  - `constraints?: string[]`
+
+Response:
+- `valid: boolean`
+- `violations: string[]`
+- `retry_prompt: string | null`
+- optional `cleaned_output` and `warning` for retry mode
+
 ### Bridge endpoints
 
 - `POST /bridge/ide`:
@@ -142,3 +204,4 @@ Same request shape as `/optimize`, with response keys:
 
 - Backward-compatible additive changes are allowed.
 - Removing documented keys or changing key types requires a major-version migration note.
+- If `VIBEX_AUTH_TOKEN` is set, `POST /optimize`, `POST /sanitize`, and `POST /validate` require `x-vibex-token` or bearer auth.

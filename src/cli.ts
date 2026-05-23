@@ -4,8 +4,13 @@ import { spawn } from "node:child_process";
 import { formatDoctorReport, runDoctor } from "./core/doctor.js";
 import { optimizePrompt } from "./core/formatter.js";
 import { resolveGovernedOptions } from "./core/governance.js";
+import { routeModel } from "./core/model-router.js";
 import { createPreview } from "./core/preview.js";
 import { scoreOptimization } from "./core/quality.js";
+import { sanitizeValidateWithRetry } from "./core/retry-loop.js";
+import { sanitizeOutput } from "./core/sanitize.js";
+import { toStpPrompt } from "./core/stp.js";
+import { validateOutput } from "./core/validate.js";
 import { loadRepoConfig, saveRepoConfig } from "./core/repo-config.js";
 import { clearProjectMemory, loadProjectMemory, saveProjectMemory, scanProject } from "./core/memory.js";
 import { isPolicyMode } from "./core/policy.js";
@@ -32,6 +37,11 @@ const args = process.argv.slice(2);
 async function main(): Promise<void> {
   const json = consumeFlag("--json");
   let explain = consumeFlag("--explain");
+  const stpMode = consumeFlag("--stp");
+
+  if (args[0] === "/vibe" || args[0] === "vibe") {
+    args.shift();
+  }
 
   if (args[0] === "scan") {
     args.shift();
@@ -359,6 +369,80 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args[0] === "sanitize") {
+    args.shift();
+    const constraints = consumeConstraints();
+    const aiOutput = stripOuterQuotes(await resolvePromptArg(args));
+    const sanitized = await sanitizeOutput(aiOutput, constraints, process.cwd());
+    if (json) {
+      console.log(JSON.stringify({
+        cleaned_output: sanitized.cleanedOutput,
+        violations: sanitized.violations
+      }, null, 2));
+    } else {
+      console.log(sanitized.cleanedOutput);
+    }
+    return;
+  }
+
+  if (args[0] === "validate") {
+    args.shift();
+    const constraints = consumeConstraints();
+    const projectRoot = consumeOption("--project-root") ?? process.cwd();
+    const retry = consumeFlag("--retry");
+    const content = stripOuterQuotes(await resolvePromptArg(args));
+    if (retry) {
+      const retried = await sanitizeValidateWithRetry(content, constraints, projectRoot);
+      if (json) {
+        console.log(JSON.stringify({
+          valid: retried.valid,
+          violations: retried.violations,
+          cleaned_output: retried.cleanedOutput,
+          warning: retried.warning ?? null,
+          attempts: retried.attempts
+        }, null, 2));
+      } else {
+        console.log(retried.cleanedOutput);
+      }
+      return;
+    }
+
+    const validated = await validateOutput(content, { projectRoot, constraints });
+    if (json) {
+      console.log(JSON.stringify({
+        valid: validated.valid,
+        violations: validated.violations,
+        retry_prompt: validated.retryPrompt
+      }, null, 2));
+    } else {
+      console.log(validated.valid ? "valid" : `invalid: ${validated.violations.join(", ")}`);
+    }
+    return;
+  }
+
+  if (args[0] === "stp") {
+    args.shift();
+    const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
+    const constraints = consumeConstraints();
+    const contextFile = consumeOption("--context-file");
+    const contextJson = consumeOption("--context-json");
+    const prompt = stripOuterQuotes(await resolvePromptArg(args));
+    const context = await loadCliContext(contextFile, contextJson);
+    const resolved = await resolveContext(context);
+    const stpPrompt = toStpPrompt(prompt, resolved, { constraints });
+    const route = await routeModel(prompt, governed.target, process.cwd());
+    if (json) {
+      console.log(JSON.stringify({
+        stp_prompt: stpPrompt,
+        model_flag: route.modelFlag,
+        hint: route.hint
+      }, null, 2));
+    } else {
+      console.log(stpPrompt);
+    }
+    return;
+  }
+
   if (args[0] === "score") {
     args.shift();
     const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
@@ -417,20 +501,25 @@ async function main(): Promise<void> {
   const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
   const include = consumeContextKeys("--include") ?? governed.include;
   const exclude = consumeContextKeys("--exclude") ?? governed.exclude;
+  const constraints = consumeConstraints();
   const contextFile = consumeOption("--context-file");
   const contextJson = consumeOption("--context-json");
   const prompt = stripOuterQuotes(await resolvePromptArg(args));
   const context = await loadCliContext(contextFile, contextJson);
   const options: CompressionOptions = { ...governed, include, exclude, explain };
+  const resolvedContext = await resolveContext(context);
   const optimized = previewMode
-    ? createPreview(prompt, await resolveContext(context), options).optimized
+    ? createPreview(prompt, resolvedContext, options).optimized
     : await optimizePrompt(prompt, context, options);
-  const preview = previewMode ? createPreview(prompt, await resolveContext(context), options) : undefined;
-  const compareOptimized = compareMode ? enforceTokenEfficiency(prompt, optimized) : optimized;
+  const preview = previewMode ? createPreview(prompt, resolvedContext, options) : undefined;
+  const stpPrompt = toStpPrompt(prompt, resolvedContext, { constraints });
+  const modelRoute = await routeModel(prompt, governed.target, process.cwd());
+  const finalOptimized = stpMode ? stpPrompt : optimized;
+  const compareOptimized = compareMode ? enforceTokenEfficiency(prompt, finalOptimized) : finalOptimized;
   const compare = compareMode ? compareTokenUsage(prompt, compareOptimized) : undefined;
 
   if (copy) {
-    await copyToClipboard(optimized);
+    await copyToClipboard(finalOptimized);
   }
 
   if (json) {
@@ -438,7 +527,13 @@ async function main(): Promise<void> {
       ? { ...preview, copied: copy, target: governed.target }
       : compare
       ? { optimized: compareOptimized, copied: copy, target: governed.target, ...compare }
-      : { optimized, copied: copy, target: governed.target };
+      : {
+        optimized: finalOptimized,
+        copied: copy,
+        target: governed.target,
+        stp_prompt: stpPrompt,
+        model_flag: modelRoute.modelFlag
+      };
     console.log(JSON.stringify(output, null, 2));
     return;
   }
@@ -453,7 +548,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(optimized);
+  console.log(finalOptimized);
 }
 
 function consumeFlag(flag: string): boolean {
@@ -473,6 +568,14 @@ function consumeOption(flag: string): string | undefined {
   const value = args[index + 1];
   args.splice(index, 2);
   return value;
+}
+
+function consumeConstraints(): string[] {
+  const raw = consumeOption("--constraints");
+  if (!raw) {
+    return ["diff-only", "no-explanations", "exact-line-refs"];
+  }
+  return raw.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
 function consumeContextKeys(flag: string): ContextKey[] | undefined {

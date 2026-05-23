@@ -16,6 +16,12 @@ export interface IdeInstallSnippet {
   tasksJson: string;
 }
 
+export interface IdeOptimizeBadgePayload {
+  label: string;
+  acceptKey: "Tab" | "Enter";
+  action: "replace-prompt";
+}
+
 export function createIdeReplacement(optimized: string): IdeReplacement {
   return {
     range: "active-input",
@@ -27,6 +33,14 @@ export function createIdeBridgePayload(optimized: string): IdeBridgePayload {
   return {
     version: 1,
     replacement: createIdeReplacement(optimized)
+  };
+}
+
+export function createIdeOptimizeBadgePayload(): IdeOptimizeBadgePayload {
+  return {
+    label: "✨ Optimize?",
+    acceptKey: "Tab",
+    action: "replace-prompt"
   };
 }
 

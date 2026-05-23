@@ -40,6 +40,32 @@ test("optimize endpoint returns structured result", async () => {
   assert.equal(response.statusCode, 200);
   assert.match(body.optimized, /Fix auth/);
   assert.equal(body.analysis.isVague, true);
+  assert.equal(typeof body.stp_prompt, "string");
+  assert.equal(typeof body.state_anchor, "string");
+  assert.equal(typeof body.confidence, "number");
+});
+
+test("optimize endpoint accepts SPEC2 raw_prompt and ide_context", async () => {
+  const server = createServer();
+  const response = await server.inject({
+    method: "POST",
+    url: "/optimize",
+    body: JSON.stringify({
+      raw_prompt: "fix auth redirect thing",
+      ide_context: {
+        root: "/repo",
+        file: "src/auth.ts",
+        line_start: 42,
+        stack: "Next14",
+        error: "session undefined"
+      }
+    })
+  });
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.match(body.optimized, /Fix auth redirect thing/);
+  assert.match(body.stp_prompt, /^→ /);
 });
 
 test("optimize endpoint accepts target without adding wrapper tokens", async () => {
@@ -95,6 +121,60 @@ test("score endpoint returns quality report", async () => {
   assert.match(body.optimized, /Fix auth redirect issue/);
   assert.equal(typeof body.quality.score, "number");
   assert.match(body.quality.grade, /^[ABCDF]$/);
+});
+
+test("sanitize endpoint strips prose and keeps diff lines", async () => {
+  const server = createServer();
+  const response = await server.inject({
+    method: "POST",
+    url: "/sanitize",
+    body: JSON.stringify({
+      ai_output: "Here's how to fix it\n```diff\n+ const x = 1\n```",
+      constraints: ["diff-only", "no-explanations"]
+    })
+  });
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(Array.isArray(body.violations), true);
+  assert.match(body.cleaned_output, /```diff/);
+  assert.doesNotMatch(body.cleaned_output, /Here's how/);
+});
+
+test("validate endpoint supports cleaned_output checks", async () => {
+  const server = createServer();
+  const response = await server.inject({
+    method: "POST",
+    url: "/validate",
+    body: JSON.stringify({
+      cleaned_output: "diff --git a/src/auth.ts b/src/auth.ts\n+const x = 1",
+      constraints: ["diff-only"],
+      project_root: process.cwd()
+    })
+  });
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(typeof body.valid, "boolean");
+  assert.equal(Array.isArray(body.violations), true);
+});
+
+test("validate endpoint supports ai_output retry fallback", async () => {
+  const server = createServer();
+  const response = await server.inject({
+    method: "POST",
+    url: "/validate",
+    body: JSON.stringify({
+      ai_output: "Here is prose only, no diff",
+      constraints: ["diff-only", "no-explanations"],
+      project_root: process.cwd()
+    })
+  });
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(typeof body.valid, "boolean");
+  assert.equal(typeof body.cleaned_output, "string");
 });
 
 test("bridge ide endpoint returns replacement payload", async () => {
@@ -177,4 +257,32 @@ test("bridge browser endpoint applies team default target", async () => {
   assert.equal(response.statusCode, 200);
   assert.equal(body.target, "cursor");
   await rm(root, { recursive: true, force: true });
+});
+
+test("auth token is enforced only when VIBEX_AUTH_TOKEN is set", async () => {
+  const previous = process.env.VIBEX_AUTH_TOKEN;
+  process.env.VIBEX_AUTH_TOKEN = "secret-token";
+  try {
+    const server = createServer();
+    const blocked = await server.inject({
+      method: "POST",
+      url: "/optimize",
+      body: JSON.stringify({ prompt: "fix auth" })
+    });
+    assert.equal(blocked.statusCode, 401);
+
+    const allowed = await server.inject({
+      method: "POST",
+      url: "/optimize",
+      headers: { "x-vibex-token": "secret-token" },
+      body: JSON.stringify({ prompt: "fix auth" })
+    });
+    assert.equal(allowed.statusCode, 200);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.VIBEX_AUTH_TOKEN;
+    } else {
+      process.env.VIBEX_AUTH_TOKEN = previous;
+    }
+  }
 });

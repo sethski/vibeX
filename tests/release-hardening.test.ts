@@ -42,3 +42,22 @@ test("optimization snapshot artifact is present and valid", async () => {
     assert.equal(typeof scenario.expect.optimizedHash, "string");
   }
 });
+
+test("spec2 config and python metadata artifacts are present", async () => {
+  const root = process.cwd();
+  const defaults = JSON.parse(await readFile(join(root, "config", "defaults.json"), "utf8")) as {
+    retryLimits: { maxAttempts: number };
+  };
+  const rules = JSON.parse(await readFile(join(root, "config", "rules.json"), "utf8")) as {
+    outputRules: { requiredTag: string };
+  };
+  const models = JSON.parse(await readFile(join(root, "config", "models.json"), "utf8")) as {
+    claude: { modelFlag: string | null };
+  };
+  const pyproject = await readFile(join(root, "pyproject.toml"), "utf8");
+
+  assert.equal(typeof defaults.retryLimits.maxAttempts, "number");
+  assert.equal(typeof rules.outputRules.requiredTag, "string");
+  assert.equal(Object.hasOwn(models, "claude"), true);
+  assert.match(pyproject, /\[project\]/);
+});
