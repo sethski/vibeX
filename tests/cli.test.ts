@@ -15,11 +15,19 @@ test("cli supports target profiles", async () => {
 });
 
 test("cli doctor prints JSON report", async () => {
-  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "doctor", "--json"]);
+  const cwd = await mkdtemp(join(tmpdir(), "vibex-cli-doctor-"));
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ name: "tmp", private: true, scripts: { test: "node --test" } }));
+  const cliPath = join(process.cwd(), "dist", "src", "cli.js");
+
+  await execFileAsync(process.execPath, [cliPath, "scan"], { cwd });
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "doctor", "--json"], { cwd });
   const body = JSON.parse(stdout) as { checks: Array<{ name: string }> };
 
   assert.equal(Array.isArray(body.checks), true);
   assert.equal(body.checks.some((check) => check.name === "node"), true);
+
+  await rm(cwd, { recursive: true, force: true });
 });
 
 test("cli preview prints JSON context report", async () => {
