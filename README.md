@@ -1,3 +1,4 @@
+<img width="1024" height="1024" alt="ChatGPT Image May 23, 2026, 04_47_19 PM" src="https://github.com/user-attachments/assets/83b8c26e-d15a-469a-8fe6-504711b1503b" />
 # vibeX
 
 Universal prompt optimizer and context bridge for AI coding tools.
