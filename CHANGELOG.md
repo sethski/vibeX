@@ -1,5 +1,88 @@
 # Changelog
 
+## 1.10.1
+
+- Add v0.3 contract surfaces:
+  - `src/ui/tray.ts` tray status/settings contract
+  - browser watcher/bookmarklet contracts in `src/plugins/browser.ts`
+- Add SPEC2 acceptance matrix script:
+  - `scripts/check-spec2-acceptance.mjs`
+  - `npm run spec2:check`
+- Extend release hardening to include SPEC2 acceptance checks.
+- Tighten v0.2 sanitize/validate behavior:
+  - better fenced diff extraction and prose stripping
+  - stricter path plausibility and exact-line-ref checks
+  - broader import detection heuristics (JS/Python/Go/Rust/C# patterns)
+  - deterministic retry-correction prompt generation
+- Add focused tests for adapter contracts and sanitize/validate edge cases.
+
+## 1.10.0
+
+- Start SPEC2 hybrid implementation on top of v1.9:
+  - add Python core modules (`core/compressor.py`, `core/sanitizer.py`, `core/state_anchor.py`, `core/cache.py`, `core/router.py`, `core/validator.py`)
+  - add Python adapter wrapper (`plugins/claude.py`)
+  - add `pyproject.toml`
+- Add root config surface:
+  - `config/defaults.json`
+  - `config/rules.json`
+  - `config/models.json`
+- Extend bridge API:
+  - `POST /optimize` supports both legacy (`prompt/context`) and SPEC2 (`raw_prompt/ide_context`) payloads
+  - add `POST /sanitize`
+  - add `POST /validate`
+  - add optional local auth-token mode via `VIBEX_AUTH_TOKEN`
+- Add STP and state-anchor flow to optimize responses:
+  - `stp_prompt`
+  - `state_anchor`
+  - `model_flag`
+  - `confidence`
+- Add local sanitize/validate retry loop with best-effort fallback warning (`⚠️ constraint-violation`).
+- Add CLI SPEC2 commands:
+  - `vibex stp`
+  - `vibex sanitize`
+  - `vibex validate`
+  - `/vibe` alias support
+- Add adapter-contract-first plugin templates:
+  - `src/plugins/cursor.ts`
+  - `src/plugins/copilot.ts`
+- Add test coverage for dual optimize payloads, auth-token mode, sanitize/validate endpoints, STP/state-anchor/model router, and intent cache.
+
+## 1.9.0
+
+- Add deterministic optimization quality scoring with component scores:
+  - token efficiency
+  - context coverage
+  - specificity
+  - metadata privacy
+- Add CLI quality report command:
+  - `vibex score`
+- Add HTTP quality report endpoint:
+  - `POST /score`
+- Add optimization snapshot regression gate:
+  - `benchmarks/optimization-snapshots.json`
+  - `npm run quality:gate`
+- Extend release hardening pipeline to include optimization drift/privacy gate checks.
+
+## 1.8.0
+
+- Add team governance config in `.vibex/team.json` with:
+  - org-level defaults
+  - named presets
+- Add deterministic merge precedence:
+  - base defaults
+  - team defaults
+  - team preset
+  - repo overrides
+  - explicit CLI/API options
+- Add inheritance control via repo config (`inheritTeam`) and optional repo-selected preset (`teamPreset`).
+- Add CLI team commands:
+  - `vibex team show`
+  - `vibex team init --org <name>`
+  - `vibex team defaults set ...`
+  - `vibex team preset set <name> ...`
+  - `vibex team preset clear <name>`
+- Add governance coverage in core, CLI, and server tests.
+
 ## 1.7.0
 
 - Add stable-core hardening artifacts:

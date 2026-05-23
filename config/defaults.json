@@ -1,0 +1,22 @@
+{
+  "triggerWords": ["fix", "make", "better", "improve", "add", "change", "debug", "broken", "weird", "thing"],
+  "maxTokens": 120,
+  "contextLimits": {
+    "maxErrors": 3,
+    "maxNeighbors": 2,
+    "minDiffLinesForInjection": 20
+  },
+  "retryLimits": {
+    "maxAttempts": 2
+  },
+  "cacheLimits": {
+    "maxEntries": 500
+  },
+  "validationRules": {
+    "requireExistingFiles": true,
+    "requireDiffWhenDiffOnly": true,
+    "noMarkdownWhenRequested": true,
+    "noExplanationsWhenRequested": true
+  },
+  "defaultConstraints": ["diff-only", "no-explanations", "exact-line-refs"]
+}

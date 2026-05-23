@@ -1,0 +1,22 @@
+{
+  "claude": {
+    "modelFlag": "--model haiku",
+    "hint": "[MODEL: fastest]"
+  },
+  "cursor": {
+    "modelFlag": null,
+    "hint": "[MODEL: fastest]"
+  },
+  "copilot": {
+    "modelFlag": null,
+    "hint": "[MODEL: fastest]"
+  },
+  "codex": {
+    "modelFlag": null,
+    "hint": "[MODEL: fast]"
+  },
+  "auto": {
+    "modelFlag": null,
+    "hint": null
+  }
+}

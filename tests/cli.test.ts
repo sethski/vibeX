@@ -86,6 +86,81 @@ test("cli compare returns token reduction json", async () => {
   assert.match(body.optimized, /^Fix auth redirect issue/);
 });
 
+test("cli score returns quality report json", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "score",
+    "--json",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts" }),
+    "fix auth redirect issue"
+  ]);
+  const body = JSON.parse(stdout) as {
+    optimized: string;
+    quality: {
+      score: number;
+      grade: string;
+      components: { tokenEfficiency: number };
+    };
+  };
+
+  assert.match(body.optimized, /^Fix auth redirect issue/);
+  assert.equal(typeof body.quality.score, "number");
+  assert.match(body.quality.grade, /^[ABCDF]$/);
+  assert.equal(typeof body.quality.components.tokenEfficiency, "number");
+});
+
+test("cli stp returns symbolic prompt", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "stp",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts", cursorLine: 42 }),
+    "fix auth redirect thing"
+  ]);
+
+  assert.match(stdout.trim(), /^→ /);
+  assert.match(stdout, /@src\/auth\.ts:42/);
+  assert.match(stdout, /✓/);
+});
+
+test("cli sanitize returns cleaned output json", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "sanitize",
+    "--json",
+    "--constraints",
+    "diff-only,no-explanations",
+    "Here's how\n```diff\n+ const a = 1\n```"
+  ]);
+  const body = JSON.parse(stdout) as { cleaned_output: string; violations: string[] };
+
+  assert.equal(Array.isArray(body.violations), true);
+  assert.match(body.cleaned_output, /```diff/);
+  assert.doesNotMatch(body.cleaned_output, /Here's how/);
+});
+
+test("cli validate retry returns warning-safe output", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "validate",
+    "--json",
+    "--retry",
+    "--constraints",
+    "diff-only,no-explanations",
+    "Prose only output"
+  ]);
+  const body = JSON.parse(stdout) as { valid: boolean; cleaned_output: string; warning: string | null };
+
+  assert.equal(typeof body.valid, "boolean");
+  assert.equal(typeof body.cleaned_output, "string");
+});
+
+test("cli supports /vibe alias prefix", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["dist/src/cli.js", "/vibe", "fix auth"]);
+  assert.match(stdout.trim(), /^Fix auth/);
+});
+
 test("json commands do not leak secrets from prompt into context metadata", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
     "dist/src/cli.js",
@@ -275,5 +350,41 @@ test("cli policy set/show", async () => {
   const body = JSON.parse(showResult.stdout) as { policy: string };
 
   assert.equal(body.policy, "minimal");
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("cli team defaults apply to optimize output target", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "vibex-team-cli-"));
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ name: "tmp", private: true }));
+  const cliPath = join(process.cwd(), "dist", "src", "cli.js");
+
+  await execFileAsync(process.execPath, [cliPath, "team", "init", "--org", "acme"], { cwd });
+  await execFileAsync(process.execPath, [cliPath, "team", "defaults", "set", "--target", "cursor", "--policy", "strict"], { cwd });
+  const run = await execFileAsync(process.execPath, [cliPath, "--json", "fix auth"], { cwd });
+  const body = JSON.parse(run.stdout) as { target: string; optimized: string };
+
+  assert.equal(body.target, "cursor");
+  assert.match(body.optimized, /Fix auth/);
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("cli team preset can be selected via --preset", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "vibex-team-preset-cli-"));
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ name: "tmp", private: true }));
+  const cliPath = join(process.cwd(), "dist", "src", "cli.js");
+
+  await execFileAsync(process.execPath, [cliPath, "team", "preset", "set", "lean", "--policy", "minimal"], { cwd });
+  const run = await execFileAsync(process.execPath, [
+    cliPath,
+    "--json",
+    "--preset",
+    "lean",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts" }),
+    "fix auth"
+  ], { cwd });
+  const body = JSON.parse(run.stdout) as { optimized: string };
+
+  assert.match(body.optimized, /Keep response minimal and direct/);
   await rm(cwd, { recursive: true, force: true });
 });

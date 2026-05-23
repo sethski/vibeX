@@ -1,0 +1,30 @@
+{
+  "fillerWords": [
+    "hey",
+    "can you",
+    "could you",
+    "please",
+    "i want",
+    "i want you to",
+    "like",
+    "just",
+    "maybe",
+    "kind of",
+    "sort of",
+    "help me"
+  ],
+  "compressionTemplates": {
+    "default": "→ {intent} | {stack} | {file} {error} | ✓ diff-only",
+    "debug": "→ debug {intent} | {stack} | {file} | ! {error} | ✓ diff-only"
+  },
+  "frameworkStackMappings": {
+    "nextjs": "Next14",
+    "nuxt": "Nuxt",
+    "vite": "Vite",
+    "angular": "Angular",
+    "sveltekit": "SvelteKit"
+  },
+  "outputRules": {
+    "requiredTag": "[OUTPUT: diff-only | no-explanations | exact-line-refs]"
+  }
+}
