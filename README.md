@@ -1,7 +1,6 @@
-# vibeX
-
-<img src="assets/vibex-logo.png" alt="vibeX logo" width="140" />
-
+<div align="center">
+  <img src="assets/vibex-logo.png" alt="vibeX logo" width="140" />
+  
 Local-first prompt optimizer for coding assistants.
 
 ## Install
