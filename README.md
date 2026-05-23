@@ -6,7 +6,7 @@ Type vague, get precise, save tokens, ship faster. vibeX runs locally, reads onl
 
 ## Status
 
-v1.6 MVP:
+v1.9 MVP:
 
 - Deterministic prompt analysis and compression
 - Project memory in `.vibex/cache.json`
@@ -19,6 +19,9 @@ v1.6 MVP:
 - Framework fixtures for Next.js, Vite React, pnpm monorepo, Angular, SvelteKit, and Nuxt
 - `vibex compare --json` for raw vs optimized token estimates
 - Prompt policy system (`strict`, `balanced`, `minimal`) with per-repo defaults
+- Team governance config with org defaults and named presets
+- Prompt quality scoring (`vibex score`, `POST /score`)
+- Optimization drift/privacy regression gate (`npm run quality:gate`)
 - Confidence scores per context item in preview output
 - `vibex explain --json` for decision traces
 - Low-confidence fallback prompt policy
@@ -82,12 +85,28 @@ Compare prompt token usage:
 node dist/src/cli.js compare --json "please fix auth redirect issue"
 ```
 
+Score optimized prompt quality:
+
+```bash
+node dist/src/cli.js score --json "please fix auth redirect issue"
+```
+
 Policy:
 
 ```bash
 node dist/src/cli.js policy show
 node dist/src/cli.js policy set strict
 node dist/src/cli.js --policy minimal "fix auth"
+```
+
+Team governance:
+
+```bash
+node dist/src/cli.js team init --org acme
+node dist/src/cli.js team defaults set --target cursor --policy balanced
+node dist/src/cli.js team preset set debug --policy strict --include stack,error
+node dist/src/cli.js --json --preset debug "fix auth"
+node dist/src/cli.js team show
 ```
 
 JSON output:
@@ -200,6 +219,10 @@ curl -X POST http://127.0.0.1:7742/bridge/terminal \
 curl -X POST http://127.0.0.1:7742/bridge/browser \
   -H "content-type: application/json" \
   -d "{\"prompt\":\"fix auth\",\"context\":{\"activeFile\":\"src/auth.ts\",\"stack\":[\"node\"]},\"options\":{\"target\":\"cursor\"}}"
+
+curl -X POST http://127.0.0.1:7742/score \
+  -H "content-type: application/json" \
+  -d "{\"prompt\":\"fix auth\",\"context\":{\"activeFile\":\"src/auth.ts\",\"stack\":[\"node\"]}}"
 ```
 
 ## Project Memory
@@ -237,10 +260,9 @@ npm run release:hardening
 - [C:\Users\sethb\Desktop\vibex\CONTRACTS.md](C:/Users/sethb/Desktop/vibex/CONTRACTS.md) documents stable CLI/API contracts.
 - [C:\Users\sethb\Desktop\vibex\MIGRATIONS.md](C:/Users/sethb/Desktop/vibex/MIGRATIONS.md) tracks migration notes across releases.
 - [C:\Users\sethb\Desktop\vibex\benchmarks\context-baseline.json](C:/Users/sethb/Desktop/vibex/benchmarks/context-baseline.json) stores benchmark baselines used by `npm run bench:check`.
+- [C:\Users\sethb\Desktop\vibex\benchmarks\optimization-snapshots.json](C:/Users/sethb/Desktop/vibex/benchmarks/optimization-snapshots.json) stores optimization snapshots used by `npm run quality:gate`.
 
 ## Roadmap
-- Team config and governance layer
-- Quality scoring and regression gates
 - Plugin/Hook SDK
 - Incremental performance pass
 - Security and compliance hardening

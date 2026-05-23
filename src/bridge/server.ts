@@ -2,9 +2,10 @@ import { createServer as createHttpServer, type IncomingMessage, type ServerResp
 import { analyzePrompt } from "../core/analyzer.js";
 import { compressPrompt } from "../core/compressor.js";
 import { grabContext } from "../core/context-grabber.js";
-import { loadRepoConfig } from "../core/repo-config.js";
+import { resolveGovernedOptions } from "../core/governance.js";
 import { applyTargetProfile } from "../core/profiles.js";
 import { createPreview, filterContext } from "../core/preview.js";
+import { scoreOptimization } from "../core/quality.js";
 import { createBrowserBridgePayload } from "../plugins/browser.js";
 import { createIdeBridgePayload } from "../plugins/ide-light.js";
 import { formatTerminalPreview } from "../plugins/terminal.js";
@@ -47,6 +48,7 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
     && (
       url === "/optimize"
       || url === "/preview"
+      || url === "/score"
       || url === "/bridge/ide"
       || url === "/bridge/terminal"
       || url === "/bridge/browser"
@@ -59,7 +61,6 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
       }
 
       const baseContext = await grabContext({ root: payload.context?.root });
-      const repoConfig = await loadRepoConfig(baseContext.root);
       const context: ProjectContext = {
         ...baseContext,
         ...payload.context,
@@ -69,13 +70,12 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
         recentErrors: payload.context?.recentErrors ?? baseContext.recentErrors,
         importNeighbors: payload.context?.importNeighbors ?? baseContext.importNeighbors
       };
-      const options: CompressionOptions = {
-        ...(payload.options ?? {}),
-        policy: payload.options?.policy ?? repoConfig.policy
-      };
+      const options = await resolveGovernedOptions(baseContext.root, payload.options ?? {});
       const analysis = analyzePrompt(payload.prompt);
       const preview = createPreview(payload.prompt, context, options);
-      const compressed = url === "/preview" ? preview : compressPrompt(payload.prompt, filterContext(context, options), options);
+      const compressed = (url === "/preview" || url === "/score")
+        ? preview
+        : compressPrompt(payload.prompt, filterContext(context, options), options);
       const optimized = applyTargetProfile(compressed.optimized, options.target);
 
       if (url === "/bridge/ide") {
@@ -90,6 +90,14 @@ async function route(method: "GET" | "POST", url: string, body?: string): Promis
       }
       if (url === "/bridge/browser") {
         return json(200, createBrowserBridgePayload(optimized, options.target ?? "codex"));
+      }
+      if (url === "/score") {
+        return json(200, {
+          optimized,
+          tokenEstimate: compressed.tokenEstimate,
+          contextUsed: compressed.contextUsed,
+          quality: scoreOptimization(payload.prompt, preview)
+        });
       }
 
       return json(200, {

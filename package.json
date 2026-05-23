@@ -1,6 +1,6 @@
 {
   "name": "vibex",
-  "version": "1.7.0",
+  "version": "1.9.0",
   "description": "Local-first prompt optimizer and context bridge for AI coding tools.",
   "type": "module",
   "license": "MIT",
@@ -14,7 +14,8 @@
     "pack:dry": "npm publish --dry-run",
     "bench:context": "node scripts/benchmark-context.mjs",
     "bench:check": "node scripts/check-benchmark-baseline.mjs",
-    "release:hardening": "npm run test && npm run typecheck && npm run bench:check && npm run pack:dry",
+    "quality:gate": "node scripts/check-optimization-snapshots.mjs",
+    "release:hardening": "npm run test && npm run typecheck && npm run bench:check && npm run quality:gate && npm run pack:dry",
     "dev:server": "tsx src/bridge/server.ts"
   },
   "engines": {
@@ -25,6 +26,7 @@
     "CONTRACTS.md",
     "MIGRATIONS.md",
     "benchmarks/context-baseline.json",
+    "benchmarks/optimization-snapshots.json",
     "README.md",
     "LICENSE"
   ],

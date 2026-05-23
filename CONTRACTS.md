@@ -1,13 +1,13 @@
 # vibeX Stable Contracts
 
-This document defines stable public contracts for `v1.7.x`.
+This document defines stable public contracts for `v1.9.x`.
 
 ## CLI Contract
 
 ### Core optimize
 
 ```bash
-vibex [--json] [--target codex|claude|cursor|copilot] [--policy strict|balanced|minimal] "<prompt>"
+vibex [--json] [--target codex|claude|cursor|copilot] [--policy strict|balanced|minimal] [--preset <name>] "<prompt>"
 ```
 
 - `--json` output keys:
@@ -44,6 +44,19 @@ vibex explain --json "<prompt>"
   - `copied: boolean`
   - `target: ...`
 
+### Score
+
+```bash
+vibex score --json "<prompt>"
+```
+
+- JSON output keys:
+  - `optimized: string`
+  - `tokenEstimate: number`
+  - `contextUsed: string[]`
+  - `target: ...`
+  - `quality: { score, grade, components }`
+
 ### Policy
 
 ```bash
@@ -52,6 +65,24 @@ vibex policy set strict|balanced|minimal
 ```
 
 - Repo defaults are persisted in `.vibex/config.json`.
+
+### Team Governance
+
+```bash
+vibex team show
+vibex team init --org <name>
+vibex team defaults set [--target ...] [--policy ...] [--include ...] [--exclude ...]
+vibex team preset set <name> [--target ...] [--policy ...] [--include ...] [--exclude ...]
+vibex team preset clear <name>
+```
+
+- Team defaults/presets are persisted in `.vibex/team.json`.
+- Merge order is deterministic:
+  - base defaults
+  - team defaults
+  - team preset
+  - repo config overrides
+  - explicit request options
 
 ## HTTP API Contract
 
@@ -89,6 +120,14 @@ Same request shape as `/optimize`, with response keys:
 - `tokenEstimate`
 - `contextUsed`
 - `context`
+
+### `POST /score`
+
+Same request shape as `/optimize`, with response keys:
+- `optimized`
+- `tokenEstimate`
+- `contextUsed`
+- `quality`
 
 ### Bridge endpoints
 

@@ -3,11 +3,14 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { formatDoctorReport, runDoctor } from "./core/doctor.js";
 import { optimizePrompt } from "./core/formatter.js";
+import { resolveGovernedOptions } from "./core/governance.js";
 import { createPreview } from "./core/preview.js";
+import { scoreOptimization } from "./core/quality.js";
 import { loadRepoConfig, saveRepoConfig } from "./core/repo-config.js";
 import { clearProjectMemory, loadProjectMemory, saveProjectMemory, scanProject } from "./core/memory.js";
 import { isPolicyMode } from "./core/policy.js";
 import { isTargetProfile } from "./core/profiles.js";
+import { loadTeamConfig, saveTeamConfig } from "./core/team-config.js";
 import { grabContext } from "./core/context-grabber.js";
 import { compactPrompt, compareTokenUsage, estimateTokenCount } from "./core/tokens.js";
 import { browserInstallSnippet, createBrowserBridgePayload } from "./plugins/browser.js";
@@ -103,6 +106,65 @@ async function main(): Promise<void> {
     throw new Error(`Unsupported policy command: ${action}`);
   }
 
+  if (args[0] === "team") {
+    args.shift();
+    const action = args.shift() ?? "show";
+    if (action === "show") {
+      console.log(JSON.stringify(await loadTeamConfig(process.cwd()), null, 2));
+      return;
+    }
+    if (action === "init") {
+      const current = await loadTeamConfig(process.cwd());
+      const org = consumeOption("--org");
+      const next = {
+        ...current,
+        org: org?.trim() ? org.trim() : current.org
+      };
+      await saveTeamConfig(process.cwd(), next);
+      console.log(json ? JSON.stringify(next, null, 2) : "Initialized .vibex/team.json");
+      return;
+    }
+    if (action === "defaults") {
+      const verb = args.shift() ?? "show";
+      if (verb !== "set") {
+        throw new Error(`Unsupported team defaults command: ${verb}`);
+      }
+      const current = await loadTeamConfig(process.cwd());
+      current.defaults = {
+        ...current.defaults,
+        ...consumeTeamOptions()
+      };
+      await saveTeamConfig(process.cwd(), current);
+      console.log(json ? JSON.stringify(current, null, 2) : "Updated team defaults");
+      return;
+    }
+    if (action === "preset") {
+      const verb = args.shift() ?? "show";
+      const name = (args.shift() ?? "").trim();
+      if (!name) {
+        throw new Error("Preset name is required");
+      }
+      const current = await loadTeamConfig(process.cwd());
+      if (verb === "set") {
+        current.presets[name] = {
+          ...(current.presets[name] ?? {}),
+          ...consumeTeamOptions()
+        };
+        await saveTeamConfig(process.cwd(), current);
+        console.log(json ? JSON.stringify(current, null, 2) : `Updated team preset ${name}`);
+        return;
+      }
+      if (verb === "clear") {
+        delete current.presets[name];
+        await saveTeamConfig(process.cwd(), current);
+        console.log(json ? JSON.stringify(current, null, 2) : `Cleared team preset ${name}`);
+        return;
+      }
+      throw new Error(`Unsupported team preset command: ${verb}`);
+    }
+    throw new Error(`Unsupported team command: ${action}`);
+  }
+
   if (args[0] === "terminal") {
     args.shift();
     const subcommand = args.shift() ?? "preview";
@@ -122,21 +184,24 @@ async function main(): Promise<void> {
     }
 
     const copy = consumeFlag("--copy");
-    const target = consumeTarget();
-    const policy = consumePolicy(await loadRepoConfig(process.cwd()));
+    const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
     const include = consumeContextKeys("--include");
     const exclude = consumeContextKeys("--exclude");
     const contextFile = consumeOption("--context-file");
     const contextJson = consumeOption("--context-json");
     const prompt = stripOuterQuotes(await resolvePromptArg(args));
     const context = await loadCliContext(contextFile, contextJson);
-    const optimized = await optimizePrompt(prompt, context, { target, policy, include, exclude });
+    const optimized = await optimizePrompt(prompt, context, {
+      ...governed,
+      include: include ?? governed.include,
+      exclude: exclude ?? governed.exclude
+    });
     if (copy) {
       await copyToClipboard(optimized);
     }
     const preview = formatTerminalPreview(optimized);
     if (json) {
-      console.log(JSON.stringify({ ...preview, optimized, copied: copy, target }, null, 2));
+      console.log(JSON.stringify({ ...preview, optimized, copied: copy, target: governed.target }, null, 2));
     } else {
       console.log(preview.preview);
     }
@@ -187,8 +252,8 @@ async function main(): Promise<void> {
     }
     if (subcommand === "listen") {
       const profile = await loadHotkeyProfile(process.cwd());
-      const target = consumeOptionalTarget() ?? profile?.target ?? "codex";
-      const policy = consumePolicy(await loadRepoConfig(process.cwd()));
+      const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
+      const target = consumeOptionalTarget() ?? profile?.target ?? governed.target ?? "codex";
       const include = consumeContextKeys("--include") ?? profile?.include;
       const exclude = consumeContextKeys("--exclude") ?? profile?.exclude;
       const contextFile = consumeOption("--context-file");
@@ -202,7 +267,12 @@ async function main(): Promise<void> {
         context,
         include,
         exclude,
-        optimize: (prompt) => optimizePrompt(prompt, context, { target, policy, include, exclude })
+        optimize: (prompt) => optimizePrompt(prompt, context, {
+          ...governed,
+          target,
+          include,
+          exclude
+        })
       });
       return;
     }
@@ -240,15 +310,14 @@ async function main(): Promise<void> {
     if (subcommand !== "replace") {
       throw new Error(`Unsupported ide command: ${subcommand}`);
     }
-    const target = consumeTarget();
-    const policy = consumePolicy(await loadRepoConfig(process.cwd()));
-    const include = consumeContextKeys("--include");
-    const exclude = consumeContextKeys("--exclude");
+    const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
+    const include = consumeContextKeys("--include") ?? governed.include;
+    const exclude = consumeContextKeys("--exclude") ?? governed.exclude;
     const contextFile = consumeOption("--context-file");
     const contextJson = consumeOption("--context-json");
     const prompt = stripOuterQuotes(await resolvePromptArg(args));
     const context = await loadCliContext(contextFile, contextJson);
-    const optimized = await optimizePrompt(prompt, context, { target, policy, include, exclude });
+    const optimized = await optimizePrompt(prompt, context, { ...governed, include, exclude });
     const payload = createIdeBridgePayload(optimized);
     if (json) {
       console.log(JSON.stringify(payload, null, 2));
@@ -273,20 +342,59 @@ async function main(): Promise<void> {
     if (subcommand !== "bridge") {
       throw new Error(`Unsupported browser command: ${subcommand}`);
     }
-    const target = consumeTarget();
-    const policy = consumePolicy(await loadRepoConfig(process.cwd()));
-    const include = consumeContextKeys("--include");
-    const exclude = consumeContextKeys("--exclude");
+    const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
+    const include = consumeContextKeys("--include") ?? governed.include;
+    const exclude = consumeContextKeys("--exclude") ?? governed.exclude;
     const contextFile = consumeOption("--context-file");
     const contextJson = consumeOption("--context-json");
     const prompt = stripOuterQuotes(await resolvePromptArg(args));
     const context = await loadCliContext(contextFile, contextJson);
-    const optimized = await optimizePrompt(prompt, context, { target, policy, include, exclude });
-    const payload = createBrowserBridgePayload(optimized, target);
+    const optimized = await optimizePrompt(prompt, context, { ...governed, include, exclude });
+    const payload = createBrowserBridgePayload(optimized, governed.target ?? "codex");
     if (json) {
       console.log(JSON.stringify(payload, null, 2));
     } else {
       console.log(payload.text);
+    }
+    return;
+  }
+
+  if (args[0] === "score") {
+    args.shift();
+    const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
+    const include = consumeContextKeys("--include") ?? governed.include;
+    const exclude = consumeContextKeys("--exclude") ?? governed.exclude;
+    const contextFile = consumeOption("--context-file");
+    const contextJson = consumeOption("--context-json");
+    const prompt = stripOuterQuotes(await resolvePromptArg(args));
+    const context = await loadCliContext(contextFile, contextJson);
+    const preview = createPreview(prompt, await resolveContext(context), {
+      ...governed,
+      include,
+      exclude,
+      explain: true
+    });
+    const quality = scoreOptimization(prompt, preview);
+
+    if (json) {
+      console.log(JSON.stringify({
+        optimized: preview.optimized,
+        tokenEstimate: preview.tokenEstimate,
+        contextUsed: preview.contextUsed,
+        target: governed.target,
+        quality
+      }, null, 2));
+    } else {
+      console.log([
+        `Quality: ${quality.score} (${quality.grade})`,
+        `Token efficiency: ${quality.components.tokenEfficiency}`,
+        `Context coverage: ${quality.components.contextCoverage}`,
+        `Specificity: ${quality.components.specificity}`,
+        `Privacy: ${quality.components.privacy}`,
+        "",
+        "Optimized:",
+        preview.optimized
+      ].join("\n"));
     }
     return;
   }
@@ -306,15 +414,14 @@ async function main(): Promise<void> {
   }
 
   const copy = consumeFlag("--copy");
-  const target = consumeTarget();
-  const policy = consumePolicy(await loadRepoConfig(process.cwd()));
-  const include = consumeContextKeys("--include");
-  const exclude = consumeContextKeys("--exclude");
+  const governed = await resolveGovernedOptions(process.cwd(), consumeRequestedOptions());
+  const include = consumeContextKeys("--include") ?? governed.include;
+  const exclude = consumeContextKeys("--exclude") ?? governed.exclude;
   const contextFile = consumeOption("--context-file");
   const contextJson = consumeOption("--context-json");
   const prompt = stripOuterQuotes(await resolvePromptArg(args));
   const context = await loadCliContext(contextFile, contextJson);
-  const options: CompressionOptions = { target, policy, include, exclude, explain };
+  const options: CompressionOptions = { ...governed, include, exclude, explain };
   const optimized = previewMode
     ? createPreview(prompt, await resolveContext(context), options).optimized
     : await optimizePrompt(prompt, context, options);
@@ -328,10 +435,10 @@ async function main(): Promise<void> {
 
   if (json) {
     const output = preview
-      ? { ...preview, copied: copy, target }
+      ? { ...preview, copied: copy, target: governed.target }
       : compare
-      ? { optimized: compareOptimized, copied: copy, target, ...compare }
-      : { optimized, copied: copy, target };
+      ? { optimized: compareOptimized, copied: copy, target: governed.target, ...compare }
+      : { optimized, copied: copy, target: governed.target };
     console.log(JSON.stringify(output, null, 2));
     return;
   }
@@ -384,14 +491,6 @@ function consumeContextKeys(flag: string): ContextKey[] | undefined {
   return keys;
 }
 
-function consumeTarget(): TargetProfile {
-  const value = consumeOption("--target") ?? "codex";
-  if (!isTargetProfile(value)) {
-    throw new Error(`Unsupported target: ${value}`);
-  }
-  return value;
-}
-
 function consumeOptionalTarget(): TargetProfile | undefined {
   const value = consumeOption("--target");
   if (!value) {
@@ -403,15 +502,40 @@ function consumeOptionalTarget(): TargetProfile | undefined {
   return value;
 }
 
-function consumePolicy(defaults: { policy: PolicyMode }): PolicyMode {
+function consumeOptionalPolicy(): PolicyMode | undefined {
   const value = consumeOption("--policy");
   if (!value) {
-    return defaults.policy;
+    return undefined;
   }
   if (!isPolicyMode(value)) {
     throw new Error("Policy must be one of: strict, balanced, minimal");
   }
   return value;
+}
+
+function consumePreset(): string | undefined {
+  const value = consumeOption("--preset");
+  if (!value || !value.trim()) {
+    return undefined;
+  }
+  return value.trim();
+}
+
+function consumeRequestedOptions(): CompressionOptions {
+  return {
+    target: consumeOptionalTarget(),
+    policy: consumeOptionalPolicy(),
+    preset: consumePreset()
+  };
+}
+
+function consumeTeamOptions(): CompressionOptions {
+  return {
+    target: consumeOptionalTarget(),
+    policy: consumeOptionalPolicy(),
+    include: consumeContextKeys("--include"),
+    exclude: consumeContextKeys("--exclude")
+  };
 }
 
 function consumeShell(): ShellKind {

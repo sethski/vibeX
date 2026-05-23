@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "auth-balanced",
+      "policy": "balanced",
+      "prompt": "please fix auth redirect issue in middleware and keep tests intact",
+      "context": {
+        "stack": ["node", "typescript"],
+        "activeFile": "src/auth.ts",
+        "gitSummary": "src/auth.ts (+8)",
+        "recentErrors": ["TypeError: bad session"],
+        "importNeighbors": ["src/session.ts", "src/middleware.ts"]
+      },
+      "expect": {
+        "optimizedHash": "418ce1f9b21d4105babb81779864f1352a75af29a817390827e44b1d5fe07a3b",
+        "minReductionPercent": 0,
+        "minQualityScore": 0.55,
+        "mustContain": ["Fix auth redirect issue in middleware", "Preserve existing style/tests"],
+        "mustNotContain": []
+      }
+    },
+    {
+      "id": "debug-strict",
+      "policy": "strict",
+      "prompt": "debug websocket reconnect loop failing after deploy",
+      "context": {
+        "stack": ["node"],
+        "activeFile": "src/ws/client.ts",
+        "gitSummary": "src/ws/client.ts (+18)",
+        "recentErrors": ["Error: ECONNRESET at reconnect"],
+        "importNeighbors": ["src/ws/backoff.ts"]
+      },
+      "expect": {
+        "optimizedHash": "5dc4003eeb6d306139f8196318be83c75b75f68e4bfc57c72f7af9b3758067b3",
+        "minReductionPercent": 0,
+        "minQualityScore": 0.6,
+        "mustContain": ["Error: Error: ECONNRESET at reconnect", "Diff: src/ws/client.ts (+18)"],
+        "mustNotContain": []
+      }
+    },
+    {
+      "id": "secret-redaction",
+      "policy": "balanced",
+      "prompt": "fix login flow SECRET_TOKEN=abc123xyz and rotate cookie handling",
+      "context": {
+        "stack": ["node", "typescript"],
+        "activeFile": "src/login.ts",
+        "gitSummary": "src/login.ts (+3)",
+        "recentErrors": [],
+        "importNeighbors": []
+      },
+      "expect": {
+        "optimizedHash": "1fcf5a2195d3dce037303102cac9f77bc9e9a26a9c1052ebfc20645e564ef4ed",
+        "minReductionPercent": 0,
+        "minQualityScore": 0.55,
+        "mustContain": ["Fix login flow SECRET_TOKEN=abc123xyz and rotate cookie handling"],
+        "mustNotContain": ["SECRET_TOKEN", "abc123xyz"]
+      }
+    }
+  ]
+}

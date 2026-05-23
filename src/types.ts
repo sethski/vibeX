@@ -29,6 +29,7 @@ export type PolicyMode = "strict" | "balanced" | "minimal";
 export interface CompressionOptions {
   target?: TargetProfile;
   policy?: PolicyMode;
+  preset?: string;
   include?: ContextKey[];
   exclude?: ContextKey[];
   explain?: boolean;
@@ -55,6 +56,17 @@ export interface PreviewContextItem {
 
 export interface PreviewResult extends CompressionResult {
   context: PreviewContextItem[];
+}
+
+export interface QualityReport {
+  score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  components: {
+    tokenEfficiency: number;
+    contextCoverage: number;
+    specificity: number;
+    privacy: number;
+  };
 }
 
 export type TargetProfile = "codex" | "claude" | "cursor" | "copilot";

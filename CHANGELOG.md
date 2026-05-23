@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.9.0
+
+- Add deterministic optimization quality scoring with component scores:
+  - token efficiency
+  - context coverage
+  - specificity
+  - metadata privacy
+- Add CLI quality report command:
+  - `vibex score`
+- Add HTTP quality report endpoint:
+  - `POST /score`
+- Add optimization snapshot regression gate:
+  - `benchmarks/optimization-snapshots.json`
+  - `npm run quality:gate`
+- Extend release hardening pipeline to include optimization drift/privacy gate checks.
+
+## 1.8.0
+
+- Add team governance config in `.vibex/team.json` with:
+  - org-level defaults
+  - named presets
+- Add deterministic merge precedence:
+  - base defaults
+  - team defaults
+  - team preset
+  - repo overrides
+  - explicit CLI/API options
+- Add inheritance control via repo config (`inheritTeam`) and optional repo-selected preset (`teamPreset`).
+- Add CLI team commands:
+  - `vibex team show`
+  - `vibex team init --org <name>`
+  - `vibex team defaults set ...`
+  - `vibex team preset set <name> ...`
+  - `vibex team preset clear <name>`
+- Add governance coverage in core, CLI, and server tests.
+
 ## 1.7.0
 
 - Add stable-core hardening artifacts:

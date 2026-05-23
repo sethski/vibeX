@@ -86,6 +86,30 @@ test("cli compare returns token reduction json", async () => {
   assert.match(body.optimized, /^Fix auth redirect issue/);
 });
 
+test("cli score returns quality report json", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "dist/src/cli.js",
+    "score",
+    "--json",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts" }),
+    "fix auth redirect issue"
+  ]);
+  const body = JSON.parse(stdout) as {
+    optimized: string;
+    quality: {
+      score: number;
+      grade: string;
+      components: { tokenEfficiency: number };
+    };
+  };
+
+  assert.match(body.optimized, /^Fix auth redirect issue/);
+  assert.equal(typeof body.quality.score, "number");
+  assert.match(body.quality.grade, /^[ABCDF]$/);
+  assert.equal(typeof body.quality.components.tokenEfficiency, "number");
+});
+
 test("json commands do not leak secrets from prompt into context metadata", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
     "dist/src/cli.js",
@@ -275,5 +299,41 @@ test("cli policy set/show", async () => {
   const body = JSON.parse(showResult.stdout) as { policy: string };
 
   assert.equal(body.policy, "minimal");
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("cli team defaults apply to optimize output target", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "vibex-team-cli-"));
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ name: "tmp", private: true }));
+  const cliPath = join(process.cwd(), "dist", "src", "cli.js");
+
+  await execFileAsync(process.execPath, [cliPath, "team", "init", "--org", "acme"], { cwd });
+  await execFileAsync(process.execPath, [cliPath, "team", "defaults", "set", "--target", "cursor", "--policy", "strict"], { cwd });
+  const run = await execFileAsync(process.execPath, [cliPath, "--json", "fix auth"], { cwd });
+  const body = JSON.parse(run.stdout) as { target: string; optimized: string };
+
+  assert.equal(body.target, "cursor");
+  assert.match(body.optimized, /Fix auth/);
+  await rm(cwd, { recursive: true, force: true });
+});
+
+test("cli team preset can be selected via --preset", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "vibex-team-preset-cli-"));
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ name: "tmp", private: true }));
+  const cliPath = join(process.cwd(), "dist", "src", "cli.js");
+
+  await execFileAsync(process.execPath, [cliPath, "team", "preset", "set", "lean", "--policy", "minimal"], { cwd });
+  const run = await execFileAsync(process.execPath, [
+    cliPath,
+    "--json",
+    "--preset",
+    "lean",
+    "--context-json",
+    JSON.stringify({ stack: ["node"], activeFile: "src/auth.ts" }),
+    "fix auth"
+  ], { cwd });
+  const body = JSON.parse(run.stdout) as { optimized: string };
+
+  assert.match(body.optimized, /Keep response minimal and direct/);
   await rm(cwd, { recursive: true, force: true });
 });

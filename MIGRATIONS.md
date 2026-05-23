@@ -36,3 +36,16 @@
 - Stable contracts documented in `CONTRACTS.md`.
 - Benchmark baseline artifacts added under `benchmarks/`.
 - New release-hardening checks added, no runtime contract breaks.
+
+## v1.7 -> v1.8
+
+- Team governance config added in `.vibex/team.json`.
+- New team commands and `--preset` option added for deterministic policy/target inheritance.
+- Existing optimize usage remains valid; new behavior is additive when team config is present.
+
+## v1.8 -> v1.9
+
+- Add `vibex score` for deterministic prompt quality scoring.
+- Add `POST /score` API endpoint for machine-readable quality reports.
+- Add optimization snapshot gate artifact (`benchmarks/optimization-snapshots.json`) and `npm run quality:gate`.
+- Release hardening now runs quality gating in addition to tests/typecheck/benchmark/pack checks.
